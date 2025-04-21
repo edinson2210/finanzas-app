@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
-import { hash } from "bcrypt";
+import { hash } from "bcryptjs";
 import prisma from "@/lib/prisma";
+
+export async function GET() {
+  return NextResponse.json({ message: "Método no permitido" }, { status: 405 });
+}
 
 export async function POST(request: Request) {
   try {
