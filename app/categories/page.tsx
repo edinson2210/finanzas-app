@@ -38,6 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -356,7 +357,7 @@ export default function CategoriesPage() {
                 Nueva Categoría
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Crear Nueva Categoría</DialogTitle>
                 <DialogDescription>
@@ -473,7 +474,7 @@ export default function CategoriesPage() {
             if (!open) resetForm();
           }}
         >
-          <DialogContent>
+          <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Editar Categoría</DialogTitle>
               <DialogDescription>
@@ -582,35 +583,33 @@ export default function CategoriesPage() {
         </Dialog>
 
         {/* Diálogo de confirmación para eliminar */}
-        <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar categoría?</AlertDialogTitle>
-              <AlertDialogDescription>
+        <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+          <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>¿Eliminar categoría?</DialogTitle>
+              <DialogDescription>
                 Esta acción no se puede deshacer. La categoría "{name}" será
                 eliminada permanentemente.
-              </AlertDialogDescription>
+              </DialogDescription>
               {deleteError && (
                 <div className="mt-3 flex items-center gap-2 p-3 text-sm text-red-500 bg-red-50 rounded-md dark:bg-red-900/30">
                   <AlertTriangle className="h-4 w-4" />
-                  <span>{deleteError}</span>
+                  <p>{deleteError}</p>
                 </div>
               )}
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => resetForm()}>
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction
+            </DialogHeader>
+            <DialogFooter>
+              <DialogClose onClick={() => resetForm()}>Cancelar</DialogClose>
+              <Button
                 onClick={handleDeleteCategory}
                 disabled={isSubmitting}
                 className="bg-red-500 hover:bg-red-600"
               >
                 {isSubmitting ? "Eliminando..." : "Eliminar"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Card>
           <CardHeader>

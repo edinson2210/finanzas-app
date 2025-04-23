@@ -415,7 +415,7 @@ export default function SavingsPage() {
 
       {/* Modal para crear/editar meta */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {isEditMode ? "Editar Meta de Ahorro" : "Nueva Meta de Ahorro"}
@@ -529,7 +529,7 @@ export default function SavingsPage() {
         open={isContributeModalOpen}
         onOpenChange={setIsContributeModalOpen}
       >
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Contribuir a Meta de Ahorro</DialogTitle>
             <DialogDescription>

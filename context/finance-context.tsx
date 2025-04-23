@@ -46,6 +46,12 @@ export type Debt = {
     | "yearly";
   creditor?: string;
   interestRate?: number;
+  interestFrequency?:
+    | "weekly"
+    | "biweekly"
+    | "monthly"
+    | "quarterly"
+    | "yearly";
   linkedTransactions?: string[]; // IDs of related transactions
 };
 
@@ -729,6 +735,48 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Deuda no encontrada");
     }
 
+    // Calcular intereses si existe tasa de interés
+    let interestAmount = 0;
+    let amountToCapital = amount;
+
+    if (debt.interestRate && debt.interestRate > 0) {
+      // Calcular el interés según la frecuencia definida
+      const getInterestRatePerPeriod = (rate: number, frequency?: string) => {
+        switch (frequency) {
+          case "weekly":
+            return rate / 100; // Tasa semanal directa
+          case "biweekly":
+            return rate / 100; // Tasa quincenal directa
+          case "monthly":
+            return rate / 100; // Tasa mensual directa
+          case "quarterly":
+            return rate / 100; // Tasa trimestral directa
+          case "yearly":
+            return rate / 100 / 12; // Convertir tasa anual a mensual
+          default:
+            return rate / 100 / 12; // Por defecto, asumimos mensual
+        }
+      };
+
+      // Obtener tasa de interés aplicable para el período
+      const interestRatePerPeriod = getInterestRatePerPeriod(
+        debt.interestRate,
+        debt.interestFrequency
+      );
+
+      // Calcular el monto de intereses acumulados
+      interestAmount = debt.remainingAmount * interestRatePerPeriod;
+
+      // Si el pago es menor o igual al interés, todo va a intereses
+      if (amount <= interestAmount) {
+        interestAmount = amount;
+        amountToCapital = 0;
+      } else {
+        // Si el pago es mayor al interés, el excedente va al capital
+        amountToCapital = amount - interestAmount;
+      }
+    }
+
     // Crear una transacción de gasto para el pago
     const transaction: Omit<Transaction, "id"> = {
       description: `Pago de deuda: ${debt.description}`,
@@ -736,7 +784,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       type: "expense",
       category: "Deudas",
       date,
-      notes: notes || `Pago para deuda: ${debt.description}`,
+      notes:
+        notes ||
+        `Pago para deuda: ${debt.description}${
+          interestAmount > 0 ? ` (Intereses: ${interestAmount.toFixed(2)})` : ""
+        }`,
       recurrence: "none",
     };
 
@@ -744,7 +796,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const newTransaction = await addTransaction(transaction);
 
     // Actualizar la deuda con el nuevo saldo y la referencia a la transacción
-    const remainingAmount = Math.max(0, debt.remainingAmount - amount);
+    const remainingAmount = Math.max(0, debt.remainingAmount - amountToCapital);
 
     // Calcular próxima fecha de pago basada en la frecuencia
     const nextDate = new Date(date);

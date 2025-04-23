@@ -85,6 +85,7 @@ export default function DebtsPage() {
     frequency: "monthly" as Debt["frequency"],
     creditor: "",
     interestRate: "",
+    interestFrequency: "monthly" as Debt["interestFrequency"],
   });
   const [paymentData, setPaymentData] = useState({
     amount: "",
@@ -127,6 +128,7 @@ export default function DebtsPage() {
         interestRate: editing.interestRate
           ? editing.interestRate.toString()
           : "",
+        interestFrequency: editing.interestFrequency || "monthly",
       });
     } else {
       // Resetear el formulario
@@ -139,6 +141,7 @@ export default function DebtsPage() {
         frequency: "monthly" as Debt["frequency"],
         creditor: "",
         interestRate: "",
+        interestFrequency: "monthly" as Debt["interestFrequency"],
       });
     }
   }, [editing]);
@@ -166,6 +169,7 @@ export default function DebtsPage() {
       interestRate: formData.interestRate
         ? parseFloat(formData.interestRate)
         : undefined,
+      interestFrequency: formData.interestFrequency,
     };
 
     try {
@@ -387,12 +391,16 @@ export default function DebtsPage() {
             <TableCaption>Lista de todas tus deudas</TableCaption>
             <TableHeader>
               <TableRow>
-                <TableHead>Descripción</TableHead>
-                <TableHead>Monto Total</TableHead>
+                <TableHead className="w-[200px]">Descripción</TableHead>
+                <TableHead className="hidden md:table-cell">
+                  Monto Total
+                </TableHead>
                 <TableHead>Pendiente</TableHead>
-                <TableHead>Pago</TableHead>
-                <TableHead>Frecuencia</TableHead>
-                <TableHead>Próximo Pago</TableHead>
+                <TableHead className="hidden md:table-cell">Cuota</TableHead>
+                <TableHead>Interés</TableHead>
+                <TableHead className="hidden md:table-cell">
+                  Próximo Pago
+                </TableHead>
                 <TableHead>Progreso</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -400,71 +408,146 @@ export default function DebtsPage() {
             <TableBody>
               {state.debts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10">
-                    <div className="text-muted-foreground mb-2">
-                      No hay deudas registradas
-                    </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setEditing(null);
-                        setDialogOpen(true);
-                      }}
-                    >
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Añadir Deuda
-                    </Button>
+                  <TableCell colSpan={8} className="h-24 text-center">
+                    No has registrado ninguna deuda.
                   </TableCell>
                 </TableRow>
               ) : (
                 state.debts.map((debt) => {
                   const percentPaid =
-                    ((debt.totalAmount - debt.remainingAmount) /
-                      debt.totalAmount) *
-                    100;
+                    debt.totalAmount > 0
+                      ? ((debt.totalAmount - debt.remainingAmount) /
+                          debt.totalAmount) *
+                        100
+                      : 0;
+                  const formatDate = (dateString: string) => {
+                    const date = new Date(dateString);
+                    return new Intl.DateTimeFormat("es", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    }).format(date);
+                  };
+
+                  // Calcular interés mensual si existe tasa de interés
+                  const interestAmount =
+                    debt.interestRate && debt.interestRate > 0
+                      ? debt.remainingAmount *
+                        getInterestRateForPeriod(
+                          debt.interestRate,
+                          debt.interestFrequency
+                        )
+                      : 0;
+
+                  // Obtener texto de la frecuencia
+                  const getFrequencyText = (frequency?: string) => {
+                    switch (frequency) {
+                      case "weekly":
+                        return "semanal";
+                      case "biweekly":
+                        return "quincenal";
+                      case "monthly":
+                        return "mensual";
+                      case "quarterly":
+                        return "trimestral";
+                      case "yearly":
+                        return "anual";
+                      default:
+                        return "mensual";
+                    }
+                  };
+
+                  // Función para calcular tasa de interés según frecuencia
+                  function getInterestRateForPeriod(
+                    rate: number,
+                    frequency?: string
+                  ) {
+                    switch (frequency) {
+                      case "weekly":
+                        return rate / 100;
+                      case "biweekly":
+                        return rate / 100;
+                      case "monthly":
+                        return rate / 100;
+                      case "quarterly":
+                        return rate / 100;
+                      case "yearly":
+                        return rate / 100 / 12;
+                      default:
+                        return rate / 100 / 12;
+                    }
+                  }
+
                   return (
                     <TableRow key={debt.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{debt.description}</div>
-                          {debt.creditor && (
-                            <div className="text-sm text-muted-foreground">
-                              {debt.creditor}
-                            </div>
-                          )}
+                      <TableCell className="font-medium">
+                        {debt.description}
+                        {debt.creditor && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Acreedor: {debt.creditor}
+                          </div>
+                        )}
+                        <div className="md:hidden mt-1 text-xs">
+                          <div>Total: ${debt.totalAmount.toLocaleString()}</div>
+                          <div>
+                            Cuota: ${debt.monthlyPayment.toLocaleString()}
+                          </div>
+                          <div>Próximo: {formatDate(debt.nextPaymentDate)}</div>
                         </div>
                       </TableCell>
-                      <TableCell>${debt.totalAmount.toFixed(2)}</TableCell>
-                      <TableCell>${debt.remainingAmount.toFixed(2)}</TableCell>
-                      <TableCell>${debt.monthlyPayment.toFixed(2)}</TableCell>
-                      <TableCell>
-                        {debt.frequency === "daily"
-                          ? "Diario"
-                          : debt.frequency === "weekly"
-                          ? "Semanal"
-                          : debt.frequency === "biweekly"
-                          ? "Quincenal"
-                          : debt.frequency === "quarterly"
-                          ? "Trimestral"
-                          : debt.frequency === "yearly"
-                          ? "Anual"
-                          : "Mensual"}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(debt.nextPaymentDate), "dd MMM yyyy", {
-                          locale: es,
+                      <TableCell className="hidden md:table-cell">
+                        $
+                        {debt.totalAmount.toLocaleString("es-ES", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
                         })}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
+                        $
+                        {debt.remainingAmount.toLocaleString("es-ES", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        $
+                        {debt.monthlyPayment.toLocaleString("es-ES", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {debt.interestRate ? (
+                          <div>
+                            {debt.interestRate}%{" "}
+                            {getFrequencyText(debt.interestFrequency)}
+                            {interestAmount > 0 && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                ~$
+                                {interestAmount.toLocaleString("es-ES", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {formatDate(debt.nextPaymentDate)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1 min-w-[120px]">
                           <div className="flex justify-between text-xs">
-                            <span>{percentPaid.toFixed(0)}% pagado</span>
-                            <span>
+                            <span>{percentPaid.toFixed(0)}%</span>
+                            <span className="hidden md:inline">
                               $
                               {(
                                 debt.totalAmount - debt.remainingAmount
                               ).toFixed(2)}{" "}
-                              de ${debt.totalAmount.toFixed(2)}
+                              / ${debt.totalAmount.toFixed(2)}
                             </span>
                           </div>
                           <Progress value={percentPaid} className="h-2" />
@@ -497,6 +580,8 @@ export default function DebtsPage() {
                                 interestRate: debt.interestRate
                                   ? debt.interestRate.toString()
                                   : "",
+                                interestFrequency:
+                                  debt.interestFrequency || "monthly",
                               });
                               setDialogOpen(true);
                             }}
@@ -524,7 +609,7 @@ export default function DebtsPage() {
 
       {/* Diálogo para añadir/editar deuda */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editing ? "Editar Deuda" : "Añadir Nueva Deuda"}
@@ -645,7 +730,7 @@ export default function DebtsPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="interestRate">Tasa de Interés</Label>
+                <Label htmlFor="interestRate">Tasa de Interés (%)</Label>
                 <Input
                   id="interestRate"
                   type="number"
@@ -655,8 +740,38 @@ export default function DebtsPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, interestRate: e.target.value })
                   }
-                  placeholder="Ej: 5.5"
+                  placeholder="Ej: 15 para 15%"
                 />
+                <p className="text-sm text-muted-foreground">
+                  Ingresa la tasa de interés (sin el símbolo %). La frecuencia
+                  se define abajo.
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="interestFrequency">Frecuencia de Interés</Label>
+                <Select
+                  value={formData.interestFrequency || "monthly"}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      interestFrequency: value as Debt["interestFrequency"],
+                    })
+                  }
+                >
+                  <SelectTrigger id="interestFrequency">
+                    <SelectValue placeholder="Selecciona una frecuencia" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Semanal</SelectItem>
+                    <SelectItem value="biweekly">Quincenal</SelectItem>
+                    <SelectItem value="monthly">Mensual</SelectItem>
+                    <SelectItem value="quarterly">Trimestral</SelectItem>
+                    <SelectItem value="yearly">Anual</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Especifica si la tasa se aplica mensual, quincenal, etc.
+                </p>
               </div>
             </div>
             <DialogFooter>
@@ -670,7 +785,7 @@ export default function DebtsPage() {
 
       {/* Diálogo de registro de pago */}
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Registrar pago de deuda</DialogTitle>
             <DialogDescription>
@@ -759,11 +874,11 @@ export default function DebtsPage() {
         open={transactionsDialogOpen}
         onOpenChange={setTransactionsDialogOpen}
       >
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Transacciones relacionadas</DialogTitle>
+            <DialogTitle>Transacciones de la Deuda</DialogTitle>
             <DialogDescription>
-              Historial de pagos realizados para esta deuda
+              Historial de pagos y transacciones relacionadas con esta deuda.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
