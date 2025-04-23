@@ -13,6 +13,8 @@ import {
   User,
   Wallet,
   Tags,
+  DollarSign,
+  Bell,
 } from "lucide-react";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
@@ -29,6 +31,31 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NotificationsBell } from "@/components/notifications-bell";
+
+const mainNav = [
+  {
+    title: "Dashboard",
+    href: "/dashboard",
+  },
+  {
+    title: "Presupuestos",
+    href: "/budgets",
+  },
+  {
+    title: "Deudas",
+    href: "/debts",
+  },
+  {
+    title: "Metas de ahorro",
+    href: "/savings",
+    icon: <PiggyBank className="h-4 w-4" />,
+  },
+  {
+    title: "Perfil",
+    href: "/profile",
+  },
+];
 
 export function SiteHeader() {
   const [isOpen, setIsOpen] = useState(false);
@@ -75,7 +102,7 @@ export function SiteHeader() {
         <div className="mr-4 flex items-center">
           <Link
             href={homeDestination}
-            className="mr-6 flex items-center space-x-2"
+            className="mr-6 flex items-center space-x-2 pl-3"
           >
             <PiggyBank className="h-6 w-6 text-emerald-500" />
             <span className="hidden font-bold sm:inline-block">
@@ -128,6 +155,28 @@ export function SiteHeader() {
                 <div className="flex items-center gap-1">
                   <PiggyBank className="h-4 w-4" />
                   <span>Presupuestos</span>
+                </div>
+              </Link>
+              <Link
+                href="/debts"
+                className={`transition-colors ${
+                  isActive("/debts") ? activeLinkClass : inactiveLinkClass
+                }`}
+              >
+                <div className="flex items-center gap-1">
+                  <DollarSign className="h-4 w-4" />
+                  <span>Deudas</span>
+                </div>
+              </Link>
+              <Link
+                href="/savings"
+                className={`transition-colors ${
+                  isActive("/savings") ? activeLinkClass : inactiveLinkClass
+                }`}
+              >
+                <div className="flex items-center gap-1">
+                  <PiggyBank className="h-4 w-4" />
+                  <span>Metas de Ahorro</span>
                 </div>
               </Link>
               <Link
@@ -223,6 +272,30 @@ export function SiteHeader() {
                     <span>Presupuestos</span>
                   </Link>
                   <Link
+                    href="/debts"
+                    className={`flex items-center gap-2 ${
+                      isActive("/debts")
+                        ? "text-foreground"
+                        : "text-foreground/60 hover:text-foreground"
+                    }`}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <DollarSign className="h-5 w-5" />
+                    <span>Deudas</span>
+                  </Link>
+                  <Link
+                    href="/savings"
+                    className={`flex items-center gap-2 ${
+                      isActive("/savings")
+                        ? "text-foreground"
+                        : "text-foreground/60 hover:text-foreground"
+                    }`}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <PiggyBank className="h-5 w-5" />
+                    <span>Metas de Ahorro</span>
+                  </Link>
+                  <Link
                     href="/transactions"
                     className={`flex items-center gap-2 ${
                       isActive("/transactions")
@@ -287,62 +360,118 @@ export function SiteHeader() {
         )}
 
         <div className="flex flex-1 items-center justify-end space-x-2">
-          <nav className="flex items-center gap-2">
-            {isLoggedIn && (
-              <>
+          {/* Notificaciones - Solo visible cuando está logueado */}
+          {isLoggedIn && <NotificationsBell />}
+
+          <ModeToggle />
+
+          {/* Dropdown de usuario - Solo visible cuando está logueado */}
+          {isLoggedIn && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
-                  asChild
                   variant="ghost"
                   size="icon"
-                  className="hidden sm:flex"
+                  className="rounded-full overflow-hidden"
                 >
-                  <Link
-                    href="/transactions/new"
-                    className={
-                      isActive("/transactions/new") ? "text-foreground" : ""
-                    }
-                  >
-                    <Plus className="h-5 w-5" />
-                    <span className="sr-only">Nueva transacción</span>
-                  </Link>
-                </Button>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                  <Avatar className="h-8 w-8">
                     {session?.user?.image ? (
-                      <Avatar className="h-8 w-8 cursor-pointer">
-                        <AvatarImage
-                          src={session.user.image}
-                          alt={session.user.name || "Usuario"}
-                        />
-                        <AvatarFallback>
-                          {session.user.name?.charAt(0) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
+                      <AvatarImage
+                        src={session.user.image}
+                        alt={session.user.name || "Avatar"}
+                      />
                     ) : (
-                      <Button variant="ghost" size="icon">
+                      <AvatarFallback>
                         <User className="h-5 w-5" />
-                        <span className="sr-only">Perfil</span>
-                      </Button>
+                      </AvatarFallback>
                     )}
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link href="/profile">Mi Perfil</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/settings">Configuración</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout}>
-                      Cerrar sesión
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
-            )}
-            <ModeToggle />
-          </nav>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex flex-col space-y-0.5 leading-none">
+                    <p className="font-medium text-sm">
+                      {session?.user?.name || "Usuario"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {session?.user?.email || ""}
+                    </p>
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Perfil</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings" className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Configuración</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/transactions/new?type=income"
+                    className="cursor-pointer"
+                  >
+                    <Wallet className="mr-2 h-4 w-4" />
+                    <span>Nuevo Ingreso</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/transactions/new?type=expense"
+                    className="cursor-pointer"
+                  >
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    <span>Nuevo Gasto</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/budget" className="cursor-pointer">
+                    <PiggyBank className="mr-2 h-4 w-4" />
+                    <span>Nuevo Presupuesto</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/debts" className="cursor-pointer">
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    <span>Nueva Deuda</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/savings" className="cursor-pointer">
+                    <PiggyBank className="mr-2 h-4 w-4" />
+                    <span>Nueva Meta de Ahorro</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/categories" className="cursor-pointer">
+                    <Tags className="mr-2 h-4 w-4" />
+                    <span>Nueva Categoría</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-red-600 cursor-pointer"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Cerrar sesión</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* Botón de login - Solo visible cuando NO está logueado */}
+          {!isLoggedIn && !isAuthPage && (
+            <Button asChild>
+              <Link href="/login">Iniciar sesión</Link>
+            </Button>
+          )}
         </div>
       </div>
     </header>

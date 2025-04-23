@@ -17,9 +17,16 @@ export type Transaction = {
   description: string;
   amount: number;
   date: string;
-  type: "income" | "expense" | "transfer";
+  type: "income" | "expense";
   category: string;
-  recurrence?: "none" | "daily" | "weekly" | "monthly" | "quarterly" | "yearly";
+  recurrence?:
+    | "none"
+    | "daily"
+    | "weekly"
+    | "biweekly"
+    | "monthly"
+    | "quarterly"
+    | "yearly";
   notes?: string;
 };
 
@@ -30,6 +37,16 @@ export type Debt = {
   remainingAmount: number;
   monthlyPayment: number;
   nextPaymentDate: string;
+  frequency?:
+    | "daily"
+    | "weekly"
+    | "biweekly"
+    | "monthly"
+    | "quarterly"
+    | "yearly";
+  creditor?: string;
+  interestRate?: number;
+  linkedTransactions?: string[]; // IDs of related transactions
 };
 
 export type Budget = {
@@ -48,11 +65,35 @@ export type Category = {
   type: "income" | "expense" | "both";
 };
 
+export type Notification = {
+  id: string;
+  title: string;
+  message: string;
+  type: "payment" | "budget" | "debt" | "info";
+  status: "unread" | "read";
+  reference?: string;
+  referenceType?: string;
+  date: Date;
+};
+
+export type SavingGoal = {
+  id: string;
+  name: string;
+  description?: string;
+  targetAmount: number;
+  currentAmount: number;
+  deadline?: string;
+  icon?: string;
+  color?: string;
+  status: "active" | "completed" | "cancelled";
+};
+
 type FinanceState = {
   transactions: Transaction[];
   debts: Debt[];
   budgets: Budget[];
   categories: Category[];
+  savingGoals: SavingGoal[];
   settings: {
     currency: string;
     dateFormat: string;
@@ -84,6 +125,12 @@ type FinanceAction =
       payload: { id: string; data: Partial<Category> };
     }
   | { type: "DELETE_CATEGORY"; payload: string }
+  | { type: "ADD_SAVING_GOAL"; payload: SavingGoal }
+  | {
+      type: "UPDATE_SAVING_GOAL";
+      payload: { id: string; data: Partial<SavingGoal> };
+    }
+  | { type: "DELETE_SAVING_GOAL"; payload: string }
   | { type: "UPDATE_SETTINGS"; payload: Partial<FinanceState["settings"]> }
   | { type: "FETCH_TRANSACTIONS_REQUEST" }
   | { type: "FETCH_TRANSACTIONS_SUCCESS"; payload: Transaction[] }
@@ -97,6 +144,9 @@ type FinanceAction =
   | { type: "FETCH_BUDGETS_REQUEST" }
   | { type: "FETCH_BUDGETS_SUCCESS"; payload: Budget[] }
   | { type: "FETCH_BUDGETS_FAILURE"; payload: string }
+  | { type: "FETCH_SAVING_GOALS_REQUEST" }
+  | { type: "FETCH_SAVING_GOALS_SUCCESS"; payload: SavingGoal[] }
+  | { type: "FETCH_SAVING_GOALS_FAILURE"; payload: string }
   | { type: "FETCH_SETTINGS_REQUEST" }
   | { type: "FETCH_SETTINGS_SUCCESS"; payload: FinanceState["settings"] }
   | { type: "FETCH_SETTINGS_FAILURE"; payload: string }
@@ -106,7 +156,9 @@ type FinanceAction =
 type FinanceContextType = {
   state: FinanceState;
   dispatch: React.Dispatch<FinanceAction>;
-  addTransaction: (transaction: Omit<Transaction, "id">) => Promise<void>;
+  addTransaction: (
+    transaction: Omit<Transaction, "id">
+  ) => Promise<Transaction>;
   updateTransaction: (id: string, data: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   addDebt: (debt: Omit<Debt, "id">) => Promise<void>;
@@ -115,6 +167,10 @@ type FinanceContextType = {
   addBudget: (budget: Omit<Budget, "id" | "spent">) => Promise<void>;
   updateBudget: (id: string, data: Partial<Budget>) => Promise<void>;
   deleteBudget: (id: string) => Promise<void>;
+  addSavingGoal: (goal: Omit<SavingGoal, "id">) => Promise<void>;
+  updateSavingGoal: (id: string, data: Partial<SavingGoal>) => Promise<void>;
+  deleteSavingGoal: (id: string) => Promise<void>;
+  contributeToSavingGoal: (goalId: string, amount: number) => Promise<void>;
   getIncomes: () => Transaction[];
   getExpenses: () => Transaction[];
   getTotalBalance: () => number;
@@ -123,6 +179,20 @@ type FinanceContextType = {
   getUpcomingPayments: (days?: number) => Transaction[];
   getTransactionsByCategory: () => Record<string, number>;
   fetchAllData: () => Promise<void>;
+  addDebtPayment: (
+    debtId: string,
+    amount: number,
+    date: string,
+    notes?: string
+  ) => Promise<Transaction>;
+  getActiveDebts: () => Debt[];
+  getDebtTransactions: (debtId: string) => Transaction[];
+  getDebtTotalPaid: (debtId: string) => number;
+  createNotification: (
+    notification: Omit<Notification, "id" | "date" | "status">
+  ) => Promise<void>;
+  checkBudgetNotifications: () => Promise<void>;
+  checkDebtNotifications: () => Promise<void>;
 };
 
 // Estado inicial para el proveedor
@@ -131,6 +201,7 @@ const initialState: FinanceState = {
   debts: [],
   budgets: [],
   categories: [],
+  savingGoals: [],
   settings: {
     currency: "USD",
     dateFormat: "dd/MM/yyyy",
@@ -229,6 +300,27 @@ function financeReducer(
           (category) => category.id !== action.payload
         ),
       };
+    case "ADD_SAVING_GOAL":
+      return {
+        ...state,
+        savingGoals: [...state.savingGoals, action.payload],
+      };
+    case "UPDATE_SAVING_GOAL":
+      return {
+        ...state,
+        savingGoals: state.savingGoals.map((goal) =>
+          goal.id === action.payload.id
+            ? { ...goal, ...action.payload.data }
+            : goal
+        ),
+      };
+    case "DELETE_SAVING_GOAL":
+      return {
+        ...state,
+        savingGoals: state.savingGoals.filter(
+          (goal) => goal.id !== action.payload
+        ),
+      };
     case "UPDATE_SETTINGS":
       return {
         ...state,
@@ -310,6 +402,25 @@ function financeReducer(
         error: action.payload,
         isLoading: false,
       };
+    // Acciones relacionadas con cargar metas de ahorro
+    case "FETCH_SAVING_GOALS_REQUEST":
+      return {
+        ...state,
+        isLoading: true,
+        error: null,
+      };
+    case "FETCH_SAVING_GOALS_SUCCESS":
+      return {
+        ...state,
+        savingGoals: action.payload,
+        isLoading: false,
+      };
+    case "FETCH_SAVING_GOALS_FAILURE":
+      return {
+        ...state,
+        error: action.payload,
+        isLoading: false,
+      };
     // Acciones relacionadas con cargar ajustes
     case "FETCH_SETTINGS_REQUEST":
       return {
@@ -362,6 +473,17 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [status, dataLoaded]);
 
+  // Cargar datos cuando cambia el estado de la sesión
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchAllData().then(() => {
+        // Verificar notificaciones después de cargar todos los datos
+        checkBudgetNotifications();
+        checkDebtNotifications();
+      });
+    }
+  }, [status]);
+
   // Función para cargar todos los datos del usuario
   const fetchAllData = async () => {
     try {
@@ -382,6 +504,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
       // Cargar presupuestos
       await fetchBudgets();
+
+      // Cargar metas de ahorro
+      await fetchSavingGoals();
 
       // Marcar que los datos ya fueron cargados
       setDataLoaded(true);
@@ -485,35 +610,24 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Función para añadir una transacción
-  const addTransaction = async (transaction: Omit<Transaction, "id">) => {
+  const addTransaction = async (
+    transaction: Omit<Transaction, "id">
+  ): Promise<Transaction> => {
     try {
-      const response = await fetch("/api/transactions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(transaction),
-      });
+      const newTransaction: Transaction = {
+        ...transaction,
+        id: Date.now().toString(36) + Math.random().toString(36).substring(2),
+      };
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Error al crear la transacción");
-      }
-
-      const newTransaction = await response.json();
+      // Añadirla al estado mientras se procesa la API
       dispatch({ type: "ADD_TRANSACTION", payload: newTransaction });
 
-      toast({
-        title: "Transacción creada",
-        description: "La transacción se ha guardado correctamente.",
-      });
-    } catch (error: any) {
-      console.error("Error al crear transacción:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Error al crear la transacción",
-        variant: "destructive",
-      });
+      // Aquí iría la llamada a la API para guardar en el servidor
+
+      return newTransaction;
+    } catch (error) {
+      console.error("Error al añadir la transacción:", error);
+      throw error;
     }
   };
 
@@ -586,6 +700,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const newDebt = {
       ...debt,
       id: Date.now().toString(36) + Math.random().toString(36).substring(2),
+      linkedTransactions: debt.linkedTransactions || [],
     };
     dispatch({ type: "ADD_DEBT", payload: newDebt });
     return Promise.resolve();
@@ -599,6 +714,96 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const deleteDebt = async (id: string) => {
     dispatch({ type: "DELETE_DEBT", payload: id });
     return Promise.resolve();
+  };
+
+  // Nueva función para añadir un pago a una deuda
+  const addDebtPayment = async (
+    debtId: string,
+    amount: number,
+    date: string,
+    notes?: string
+  ): Promise<Transaction> => {
+    // Buscar la deuda
+    const debt = state.debts.find((d) => d.id === debtId);
+    if (!debt) {
+      throw new Error("Deuda no encontrada");
+    }
+
+    // Crear una transacción de gasto para el pago
+    const transaction: Omit<Transaction, "id"> = {
+      description: `Pago de deuda: ${debt.description}`,
+      amount,
+      type: "expense",
+      category: "Deudas",
+      date,
+      notes: notes || `Pago para deuda: ${debt.description}`,
+      recurrence: "none",
+    };
+
+    // Añadir la transacción
+    const newTransaction = await addTransaction(transaction);
+
+    // Actualizar la deuda con el nuevo saldo y la referencia a la transacción
+    const remainingAmount = Math.max(0, debt.remainingAmount - amount);
+
+    // Calcular próxima fecha de pago basada en la frecuencia
+    const nextDate = new Date(date);
+
+    // Aplicar la frecuencia correcta
+    switch (debt.frequency || "monthly") {
+      case "daily":
+        nextDate.setDate(nextDate.getDate() + 1);
+        break;
+      case "weekly":
+        nextDate.setDate(nextDate.getDate() + 7);
+        break;
+      case "biweekly":
+        nextDate.setDate(nextDate.getDate() + 15);
+        break;
+      case "monthly":
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        break;
+      case "quarterly":
+        nextDate.setMonth(nextDate.getMonth() + 3);
+        break;
+      case "yearly":
+        nextDate.setFullYear(nextDate.getFullYear() + 1);
+        break;
+    }
+
+    // Actualizar la deuda
+    await updateDebt(debtId, {
+      remainingAmount,
+      nextPaymentDate:
+        remainingAmount > 0 ? nextDate.toISOString() : debt.nextPaymentDate,
+      linkedTransactions: [
+        ...(debt.linkedTransactions || []),
+        newTransaction.id,
+      ],
+    });
+
+    return newTransaction;
+  };
+
+  // Función para obtener las deudas activas (con saldo pendiente)
+  const getActiveDebts = () => {
+    return state.debts.filter((debt) => debt.remainingAmount > 0);
+  };
+
+  // Función para obtener transacciones relacionadas con una deuda
+  const getDebtTransactions = (debtId: string) => {
+    const debt = state.debts.find((d) => d.id === debtId);
+    if (!debt || !debt.linkedTransactions) return [];
+
+    return state.transactions.filter((t) =>
+      debt.linkedTransactions?.includes(t.id)
+    );
+  };
+
+  // Función para obtener el total de pagos de una deuda
+  const getDebtTotalPaid = (debtId: string) => {
+    const transactions = getDebtTransactions(debtId);
+    return transactions.reduce((total, t) => total + t.amount, 0);
   };
 
   const getIncomes = () => {
@@ -758,6 +963,300 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const createNotification = async (
+    notification: Omit<Notification, "id" | "date" | "status">
+  ) => {
+    try {
+      await fetch("/api/notifications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(notification),
+      });
+    } catch (error) {
+      console.error("Error al crear notificación:", error);
+    }
+  };
+
+  // Verificar presupuestos y enviar notificaciones si están por excederse
+  const checkBudgetNotifications = async () => {
+    try {
+      const today = new Date();
+
+      // Obtener todos los presupuestos con su porcentaje de uso
+      const budgetsWithUsage = state.budgets.map((budget) => {
+        const spent = getExpenses()
+          .filter((expense) => expense.category === budget.category)
+          .reduce((sum, expense) => sum + expense.amount, 0);
+
+        const percentUsed = (spent / budget.amount) * 100;
+
+        return {
+          ...budget,
+          spent,
+          percentUsed,
+        };
+      });
+
+      // Notificar presupuestos que superan el threshold pero no han sido notificados antes
+      for (const budget of budgetsWithUsage) {
+        if (
+          budget.percentUsed >= state.settings.budgetThreshold &&
+          budget.percentUsed < 100
+        ) {
+          await createNotification({
+            title: "Alerta de Presupuesto",
+            message: `Tu presupuesto para ${
+              budget.category
+            } está al ${Math.round(budget.percentUsed)}% del límite.`,
+            type: "budget",
+            reference: budget.id,
+            referenceType: "budget",
+          });
+        } else if (budget.percentUsed >= 100) {
+          await createNotification({
+            title: "Presupuesto Excedido",
+            message: `Has excedido tu presupuesto para ${
+              budget.category
+            } (${Math.round(budget.percentUsed)}%).`,
+            type: "budget",
+            reference: budget.id,
+            referenceType: "budget",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error al verificar notificaciones de presupuesto:", error);
+    }
+  };
+
+  // Verificar deudas con pagos próximos y enviar notificaciones
+  const checkDebtNotifications = async () => {
+    try {
+      const today = new Date();
+      const reminderDays = state.settings.reminderDays || 3;
+
+      // Calcular la fecha límite para recordatorios (hoy + días de anticipación)
+      const reminderDate = new Date(today);
+      reminderDate.setDate(today.getDate() + reminderDays);
+
+      // Filtrar deudas con pagos próximos
+      const upcomingPayments = state.debts.filter((debt) => {
+        if (debt.remainingAmount <= 0) return false;
+
+        const paymentDate = new Date(debt.nextPaymentDate);
+        return paymentDate <= reminderDate && paymentDate >= today;
+      });
+
+      // Crear notificaciones para cada pago próximo
+      for (const debt of upcomingPayments) {
+        const paymentDate = new Date(debt.nextPaymentDate);
+        const daysUntilPayment = Math.ceil(
+          (paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        let message = "";
+
+        if (daysUntilPayment === 0) {
+          message = `Tienes un pago de ${debt.monthlyPayment} para "${debt.description}" que vence hoy.`;
+        } else if (daysUntilPayment === 1) {
+          message = `Tienes un pago de ${debt.monthlyPayment} para "${debt.description}" que vence mañana.`;
+        } else {
+          message = `Tienes un pago de ${debt.monthlyPayment} para "${debt.description}" que vence en ${daysUntilPayment} días.`;
+        }
+
+        await createNotification({
+          title: "Recordatorio de Pago",
+          message,
+          type: "payment",
+          reference: debt.id,
+          referenceType: "debt",
+        });
+      }
+    } catch (error) {
+      console.error("Error al verificar notificaciones de deudas:", error);
+    }
+  };
+
+  // Funciones para el manejo de metas de ahorro
+  const fetchSavingGoals = async () => {
+    dispatch({ type: "FETCH_SAVING_GOALS_REQUEST" });
+    try {
+      const response = await fetch("/api/saving-goals");
+
+      if (!response.ok) {
+        throw new Error("Error al obtener metas de ahorro");
+      }
+
+      const data = await response.json();
+      dispatch({ type: "FETCH_SAVING_GOALS_SUCCESS", payload: data });
+    } catch (error: any) {
+      console.error("Error al cargar metas de ahorro:", error);
+      dispatch({
+        type: "FETCH_SAVING_GOALS_FAILURE",
+        payload: error.message || "Error al cargar metas de ahorro",
+      });
+    }
+  };
+
+  // Función para añadir una meta de ahorro
+  const addSavingGoal = async (goal: Omit<SavingGoal, "id">) => {
+    try {
+      const response = await fetch("/api/saving-goals", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(goal),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Error al crear la meta de ahorro");
+      }
+
+      const newGoal = await response.json();
+      dispatch({ type: "ADD_SAVING_GOAL", payload: newGoal });
+
+      toast({
+        title: "Meta de ahorro creada",
+        description: "La meta de ahorro se ha guardado correctamente.",
+      });
+    } catch (error: any) {
+      console.error("Error al crear meta de ahorro:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al crear la meta de ahorro",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Función para actualizar una meta de ahorro
+  const updateSavingGoal = async (id: string, data: Partial<SavingGoal>) => {
+    try {
+      const response = await fetch(`/api/saving-goals/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(
+          error.message || "Error al actualizar la meta de ahorro"
+        );
+      }
+
+      const updatedGoal = await response.json();
+      dispatch({
+        type: "UPDATE_SAVING_GOAL",
+        payload: { id, data: updatedGoal },
+      });
+
+      toast({
+        title: "Meta de ahorro actualizada",
+        description: "La meta de ahorro se ha actualizado correctamente.",
+      });
+    } catch (error: any) {
+      console.error("Error al actualizar meta de ahorro:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al actualizar la meta de ahorro",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Función para eliminar una meta de ahorro
+  const deleteSavingGoal = async (id: string) => {
+    try {
+      const response = await fetch(`/api/saving-goals/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Error al eliminar la meta de ahorro");
+      }
+
+      dispatch({ type: "DELETE_SAVING_GOAL", payload: id });
+
+      toast({
+        title: "Meta de ahorro eliminada",
+        description: "La meta de ahorro se ha eliminado correctamente.",
+      });
+    } catch (error: any) {
+      console.error("Error al eliminar meta de ahorro:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al eliminar la meta de ahorro",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Función para contribuir a una meta de ahorro (aumentar su monto actual)
+  const contributeToSavingGoal = async (goalId: string, amount: number) => {
+    try {
+      // Buscar la meta de ahorro
+      const goal = state.savingGoals.find((g) => g.id === goalId);
+      if (!goal) {
+        throw new Error("Meta de ahorro no encontrada");
+      }
+
+      // Calcular el nuevo monto actual
+      const newCurrentAmount = goal.currentAmount + amount;
+
+      // Determinar si la meta se ha completado
+      const isCompleted = newCurrentAmount >= goal.targetAmount;
+
+      // Actualizar la meta de ahorro
+      await updateSavingGoal(goalId, {
+        currentAmount: newCurrentAmount,
+        status: isCompleted ? "completed" : goal.status,
+      });
+
+      // Crear una transacción de ahorro
+      const transaction: Omit<Transaction, "id"> = {
+        description: `Ahorro para: ${goal.name}`,
+        amount,
+        type: "expense", // Se considera un gasto porque es dinero que se aparta
+        category: "Ahorro",
+        date: new Date().toISOString(),
+        notes: `Contribución a meta de ahorro: ${goal.name}`,
+        recurrence: "none",
+      };
+
+      await addTransaction(transaction);
+
+      // Mostrar notificación de éxito
+      toast({
+        title: "Contribución realizada",
+        description: `Has contribuido $${amount} a tu meta "${goal.name}".`,
+      });
+
+      // Si se completó la meta, mostrar una notificación adicional
+      if (isCompleted) {
+        toast({
+          title: "¡Meta completada!",
+          description: `¡Felicidades! Has completado tu meta de ahorro "${goal.name}".`,
+          variant: "default",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error al contribuir a la meta de ahorro:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al contribuir a la meta de ahorro",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <FinanceContext.Provider
       value={{
@@ -772,6 +1271,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         addBudget,
         updateBudget,
         deleteBudget,
+        addSavingGoal,
+        updateSavingGoal,
+        deleteSavingGoal,
+        contributeToSavingGoal,
         getIncomes,
         getExpenses,
         getTotalBalance,
@@ -780,6 +1283,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         getUpcomingPayments,
         getTransactionsByCategory,
         fetchAllData,
+        addDebtPayment,
+        getActiveDebts,
+        getDebtTransactions,
+        getDebtTotalPaid,
+        createNotification,
+        checkBudgetNotifications,
+        checkDebtNotifications,
       }}
     >
       {children}

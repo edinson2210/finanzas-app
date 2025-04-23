@@ -56,6 +56,8 @@ model User {
   debts         Debt[]
   budgets       Budget[]
   settings      Settings?
+  notifications Notification[]
+  savingGoals   SavingGoal[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -76,9 +78,9 @@ model Transaction {
   description String
   amount      Float
   date        DateTime
-  type        String   // "income", "expense", "transfer"
+  type        String   // "income", "expense"
   category    String
-  recurrence  String?  // "none", "daily", "weekly", "monthly", "quarterly", "yearly"
+  recurrence  String?  // "none", "daily", "weekly", "biweekly", "monthly", "quarterly", "yearly"
   notes       String?  @db.Text
   
   // Relación con el usuario
@@ -113,6 +115,7 @@ model Debt {
   remainingAmount Float
   monthlyPayment  Float
   nextPaymentDate DateTime
+  frequency       String?  @default("monthly") // "daily", "weekly", "biweekly", "monthly", "quarterly", "yearly"
   
   // Relación con el usuario
   userId          String
@@ -152,4 +155,43 @@ model Settings {
   
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+// Modelo para notificaciones
+model Notification {
+  id          String   @id @default(cuid())
+  title       String
+  message     String
+  type        String   // "payment", "budget", "debt", "info"
+  status      String   @default("unread") // "unread", "read"
+  reference   String?  // ID de referencia (ej: transactionId, debtId, etc.)
+  referenceType String? // Tipo de referencia (ej: "transaction", "debt", "budget")
+  date        DateTime @default(now())
+  
+  // Relación con el usuario
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Modelo para metas de ahorro
+model SavingGoal {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  targetAmount Float
+  currentAmount Float    @default(0)
+  deadline    DateTime?
+  icon        String?   @default("PiggyBank")
+  color       String?   @default("#10b981")
+  status      String    @default("active") // "active", "completed", "cancelled"
+  
+  // Relación con el usuario
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

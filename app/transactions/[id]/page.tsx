@@ -162,8 +162,6 @@ export default function TransactionDetailsPage() {
         return "bg-green-100 text-green-800 hover:bg-green-200";
       case "expense":
         return "bg-red-100 text-red-800 hover:bg-red-200";
-      case "transfer":
-        return "bg-blue-100 text-blue-800 hover:bg-blue-200";
       default:
         return "";
     }
@@ -176,8 +174,6 @@ export default function TransactionDetailsPage() {
         return "Ingreso";
       case "expense":
         return "Gasto";
-      case "transfer":
-        return "Transferencia";
       default:
         return transaction.type;
     }
@@ -218,42 +214,58 @@ export default function TransactionDetailsPage() {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-2">
-          <Button variant="ghost" onClick={handleGoBack} className="p-0 h-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+        <div className="flex items-center space-x-2 overflow-hidden">
+          <Button
+            variant="ghost"
+            onClick={handleGoBack}
+            className="p-0 h-auto shrink-0"
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
           </Button>
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Link href="/dashboard" className="hover:underline">
+          <div className="flex items-center text-sm text-muted-foreground overflow-hidden">
+            <Link
+              href="/dashboard"
+              className="hover:underline whitespace-nowrap"
+            >
               Dashboard
             </Link>
             <span className="mx-2">/</span>
             {transaction.type === "income" ? (
-              <Link href="/income" className="hover:underline">
+              <Link
+                href="/income"
+                className="hover:underline whitespace-nowrap"
+              >
                 Ingresos
               </Link>
-            ) : transaction.type === "expense" ? (
-              <Link href="/expenses" className="hover:underline">
-                Gastos
-              </Link>
             ) : (
-              <Link href="/dashboard" className="hover:underline">
-                Transferencias
+              <Link
+                href="/expenses"
+                className="hover:underline whitespace-nowrap"
+              >
+                Gastos
               </Link>
             )}
             <span className="mx-2">/</span>
-            <span className="text-foreground font-medium truncate max-w-[200px]">
+            <span className="text-foreground font-medium truncate max-w-[150px]">
               {transaction.description}
             </span>
           </div>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={handleEdit}>
+        <div className="flex space-x-2 mt-2 sm:mt-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleEdit}
+            className="flex-1 sm:flex-auto"
+          >
             <Edit className="mr-2 h-4 w-4" /> Editar
           </Button>
           <Button
             variant="destructive"
+            size="sm"
             onClick={() => setDeleteDialogOpen(true)}
+            className="flex-1 sm:flex-auto"
           >
             <Trash className="mr-2 h-4 w-4" /> Eliminar
           </Button>
@@ -343,12 +355,10 @@ export default function TransactionDetailsPage() {
         </CardContent>
       </Card>
 
-      {/* Transacciones recientes de la misma categoría */}
-      {transaction.type !== "transfer" && (
+      {transaction.type === "income" && (
         <div className="mt-6">
           <h2 className="text-lg font-medium mb-4">
-            Otras {transaction.type === "income" ? "ingresos" : "gastos"} en la
-            misma categoría
+            Otros ingresos en la misma categoría
           </h2>
           <Card>
             <CardContent className="pt-6">
@@ -376,47 +386,55 @@ export default function TransactionDetailsPage() {
                           })}
                         </span>
                       </div>
-                      <span
-                        className={`font-bold ${
-                          t.type === "expense"
-                            ? "text-red-600"
-                            : t.type === "income"
-                            ? "text-green-600"
-                            : ""
-                        }`}
-                      >
-                        {t.type === "expense" ? "-" : ""}${t.amount.toFixed(2)}
+                      <span className="font-bold text-green-600">
+                        ${t.amount.toFixed(2)}
                       </span>
                     </div>
                   ))}
-                {state.transactions.filter(
-                  (t) =>
-                    t.id !== transaction.id &&
-                    t.type === transaction.type &&
-                    getCategoryName(t.category) ===
-                      getCategoryName(transaction.category)
-                ).length === 0 && (
-                  <div className="text-center py-4 text-muted-foreground">
-                    No hay otras transacciones en esta categoría
-                  </div>
-                )}
               </div>
             </CardContent>
-            <CardFooter className="justify-center border-t">
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-                className="cursor-pointer hover:bg-gray-50 my-3"
-              >
-                <Link
-                  href={transaction.type === "income" ? "/income" : "/expenses"}
-                >
-                  Ver todas los{" "}
-                  {transaction.type === "income" ? "ingresos" : "gastos"}
-                </Link>
-              </Button>
-            </CardFooter>
+          </Card>
+        </div>
+      )}
+
+      {transaction.type === "expense" && (
+        <div className="mt-6">
+          <h2 className="text-lg font-medium mb-4">
+            Otros gastos en la misma categoría
+          </h2>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                {state.transactions
+                  .filter(
+                    (t) =>
+                      t.id !== transaction.id &&
+                      t.type === transaction.type &&
+                      getCategoryName(t.category) ===
+                        getCategoryName(transaction.category)
+                  )
+                  .slice(0, 5)
+                  .map((t) => (
+                    <div
+                      key={t.id}
+                      className="flex items-center justify-between py-2 border-b border-gray-100 cursor-pointer hover:bg-gray-50"
+                      onClick={() => router.push(`/transactions/${t.id}`)}
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium">{t.description}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {format(new Date(t.date), "dd MMM yyyy", {
+                            locale: es,
+                          })}
+                        </span>
+                      </div>
+                      <span className="font-bold text-red-600">
+                        -${t.amount.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
           </Card>
         </div>
       )}

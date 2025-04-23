@@ -30,32 +30,70 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon, PlusCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { useFinance } from "@/context/finance-context";
-import { Debt } from "@/context/finance-context";
+import { Debt, Transaction } from "@/context/finance-context";
 import { cn } from "@/lib/utils";
 
 export default function DebtsPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { state, addDebt, updateDebt, deleteDebt } = useFinance();
+  const {
+    state,
+    addDebt,
+    updateDebt,
+    deleteDebt,
+    addDebtPayment,
+    getDebtTransactions,
+    getDebtTotalPaid,
+  } = useFinance();
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedDebtId, setSelectedDebtId] = useState<string | null>(null);
+  const [transactionsDialogOpen, setTransactionsDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Debt | null>(null);
-
-  // Estado para el nuevo formulario de deuda
-  const [description, setDescription] = useState("");
-  const [totalAmount, setTotalAmount] = useState(0);
-  const [remainingAmount, setRemainingAmount] = useState(0);
-  const [monthlyPayment, setMonthlyPayment] = useState(0);
-  const [nextPaymentDate, setNextPaymentDate] = useState("");
+  const [formData, setFormData] = useState({
+    description: "",
+    totalAmount: "",
+    remainingAmount: "",
+    monthlyPayment: "",
+    nextPaymentDate: new Date().toISOString(),
+    frequency: "monthly" as Debt["frequency"],
+    creditor: "",
+    interestRate: "",
+  });
+  const [paymentData, setPaymentData] = useState({
+    amount: "",
+    date: new Date().toISOString(),
+    notes: "",
+  });
+  const [relatedTransactions, setRelatedTransactions] = useState<Transaction[]>(
+    []
+  );
 
   // Redirigir si no está autenticado
   useEffect(() => {
@@ -78,33 +116,56 @@ export default function DebtsPage() {
   // Actualizar el formulario si estamos editando
   useEffect(() => {
     if (editing) {
-      setDescription(editing.description);
-      setTotalAmount(editing.totalAmount);
-      setRemainingAmount(editing.remainingAmount);
-      setMonthlyPayment(editing.monthlyPayment);
-      setNextPaymentDate(
-        format(new Date(editing.nextPaymentDate), "yyyy-MM-dd")
-      );
+      setFormData({
+        description: editing.description,
+        totalAmount: editing.totalAmount.toString(),
+        remainingAmount: editing.remainingAmount.toString(),
+        monthlyPayment: editing.monthlyPayment.toString(),
+        nextPaymentDate: editing.nextPaymentDate,
+        frequency: editing.frequency,
+        creditor: editing.creditor || "",
+        interestRate: editing.interestRate
+          ? editing.interestRate.toString()
+          : "",
+      });
     } else {
       // Resetear el formulario
-      setDescription("");
-      setTotalAmount(0);
-      setRemainingAmount(0);
-      setMonthlyPayment(0);
-      setNextPaymentDate(format(new Date(), "yyyy-MM-dd"));
+      setFormData({
+        description: "",
+        totalAmount: "",
+        remainingAmount: "",
+        monthlyPayment: "",
+        nextPaymentDate: new Date().toISOString(),
+        frequency: "monthly" as Debt["frequency"],
+        creditor: "",
+        interestRate: "",
+      });
     }
   }, [editing]);
+
+  // Cargar transacciones relacionadas cuando cambia el ID de deuda seleccionado
+  useEffect(() => {
+    if (selectedDebtId) {
+      const transactions = getDebtTransactions(selectedDebtId);
+      setRelatedTransactions(transactions);
+    }
+  }, [selectedDebtId, getDebtTransactions]);
 
   // Manejar el envío del formulario
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const debtData = {
-      description,
-      totalAmount,
-      remainingAmount,
-      monthlyPayment,
-      nextPaymentDate: new Date(nextPaymentDate),
+      description: formData.description,
+      totalAmount: parseFloat(formData.totalAmount),
+      remainingAmount: parseFloat(formData.remainingAmount),
+      monthlyPayment: parseFloat(formData.monthlyPayment),
+      nextPaymentDate: formData.nextPaymentDate,
+      frequency: formData.frequency,
+      creditor: formData.creditor,
+      interestRate: formData.interestRate
+        ? parseFloat(formData.interestRate)
+        : undefined,
     };
 
     try {
@@ -151,17 +212,73 @@ export default function DebtsPage() {
     }
   };
 
+  // Función para manejar el pago de una deuda
+  const handleMakePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedDebtId) return;
+
+    try {
+      const amount = parseFloat(paymentData.amount);
+      if (isNaN(amount) || amount <= 0) {
+        toast({
+          title: "Error",
+          description: "Ingresa un monto válido",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Realizar el pago
+      await addDebtPayment(
+        selectedDebtId,
+        amount,
+        paymentData.date,
+        paymentData.notes
+      );
+
+      // Limpiar el formulario y cerrar el diálogo
+      setPaymentData({
+        amount: "",
+        date: new Date().toISOString(),
+        notes: "",
+      });
+      setPaymentDialogOpen(false);
+
+      toast({
+        title: "Pago registrado",
+        description: "El pago ha sido registrado correctamente",
+      });
+    } catch (error) {
+      console.error("Error al registrar el pago:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo registrar el pago",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Abrir diálogo de pago
+  const openPaymentDialog = (debtId: string) => {
+    setSelectedDebtId(debtId);
+    setPaymentDialogOpen(true);
+  };
+
+  // Abrir diálogo de transacciones relacionadas
+  const openTransactionsDialog = (debtId: string) => {
+    setSelectedDebtId(debtId);
+    setTransactionsDialogOpen(true);
+  };
+
   // Calcular estadísticas
-  const totalDebt = state.debts.reduce(
-    (sum, debt) => sum + debt.totalAmount,
-    0
-  );
+  const totalDebt = state.debts.reduce((sum, d) => sum + d.totalAmount, 0);
   const totalRemaining = state.debts.reduce(
-    (sum, debt) => sum + debt.remainingAmount,
+    (sum, d) => sum + d.remainingAmount,
     0
   );
   const totalMonthly = state.debts.reduce(
-    (sum, debt) => sum + debt.monthlyPayment,
+    (sum, d) => sum + d.monthlyPayment,
     0
   );
   const debtPaid =
@@ -273,7 +390,8 @@ export default function DebtsPage() {
                 <TableHead>Descripción</TableHead>
                 <TableHead>Monto Total</TableHead>
                 <TableHead>Pendiente</TableHead>
-                <TableHead>Pago Mensual</TableHead>
+                <TableHead>Pago</TableHead>
+                <TableHead>Frecuencia</TableHead>
                 <TableHead>Próximo Pago</TableHead>
                 <TableHead>Progreso</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -282,17 +400,19 @@ export default function DebtsPage() {
             <TableBody>
               {state.debts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">
-                    No hay deudas registradas.
+                  <TableCell colSpan={8} className="text-center py-10">
+                    <div className="text-muted-foreground mb-2">
+                      No hay deudas registradas
+                    </div>
                     <Button
-                      variant="link"
-                      className="ml-2"
+                      variant="outline"
                       onClick={() => {
                         setEditing(null);
                         setDialogOpen(true);
                       }}
                     >
-                      Añadir una
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Añadir Deuda
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -302,56 +422,94 @@ export default function DebtsPage() {
                     ((debt.totalAmount - debt.remainingAmount) /
                       debt.totalAmount) *
                     100;
-
                   return (
                     <TableRow key={debt.id}>
-                      <TableCell className="font-medium">
-                        {debt.description}
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{debt.description}</div>
+                          {debt.creditor && (
+                            <div className="text-sm text-muted-foreground">
+                              {debt.creditor}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>${debt.totalAmount.toFixed(2)}</TableCell>
-                      <TableCell className="font-bold text-red-600">
-                        ${debt.remainingAmount.toFixed(2)}
-                      </TableCell>
+                      <TableCell>${debt.remainingAmount.toFixed(2)}</TableCell>
                       <TableCell>${debt.monthlyPayment.toFixed(2)}</TableCell>
+                      <TableCell>
+                        {debt.frequency === "daily"
+                          ? "Diario"
+                          : debt.frequency === "weekly"
+                          ? "Semanal"
+                          : debt.frequency === "biweekly"
+                          ? "Quincenal"
+                          : debt.frequency === "quarterly"
+                          ? "Trimestral"
+                          : debt.frequency === "yearly"
+                          ? "Anual"
+                          : "Mensual"}
+                      </TableCell>
                       <TableCell>
                         {format(new Date(debt.nextPaymentDate), "dd MMM yyyy", {
                           locale: es,
                         })}
                       </TableCell>
-                      <TableCell className="w-32">
+                      <TableCell>
                         <div className="flex flex-col gap-1">
-                          <Progress
-                            value={percentPaid}
-                            className={cn(
-                              "h-2",
-                              percentPaid > 80
-                                ? "bg-green-200 [&>div]:bg-green-500"
-                                : "bg-slate-200"
-                            )}
-                          />
-                          <span className="text-xs text-muted-foreground">
-                            {percentPaid.toFixed(0)}% pagado
-                          </span>
+                          <div className="flex justify-between text-xs">
+                            <span>{percentPaid.toFixed(0)}% pagado</span>
+                            <span>
+                              $
+                              {(
+                                debt.totalAmount - debt.remainingAmount
+                              ).toFixed(2)}{" "}
+                              de ${debt.totalAmount.toFixed(2)}
+                            </span>
+                          </div>
+                          <Progress value={percentPaid} className="h-2" />
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2 justify-end">
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
                           <Button
-                            variant="ghost"
-                            size="icon"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openPaymentDialog(debt.id)}
+                          >
+                            <PlusCircle className="h-3.5 w-3.5 mr-1" />
+                            <span className="hidden sm:inline">Pago</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => {
                               setEditing(debt);
+                              setFormData({
+                                description: debt.description,
+                                totalAmount: debt.totalAmount.toString(),
+                                remainingAmount:
+                                  debt.remainingAmount.toString(),
+                                monthlyPayment: debt.monthlyPayment.toString(),
+                                nextPaymentDate: debt.nextPaymentDate,
+                                frequency: debt.frequency,
+                                creditor: debt.creditor || "",
+                                interestRate: debt.interestRate
+                                  ? debt.interestRate.toString()
+                                  : "",
+                              });
                               setDialogOpen(true);
                             }}
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-3.5 w-3.5" />
                           </Button>
                           <Button
-                            variant="ghost"
-                            size="icon"
+                            variant="outline"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700"
                             onClick={() => handleDelete(debt.id)}
                           >
-                            <Trash className="h-4 w-4 text-red-500" />
+                            <Trash className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </TableCell>
@@ -383,8 +541,10 @@ export default function DebtsPage() {
                 <Label htmlFor="description">Descripción</Label>
                 <Input
                   id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
                   placeholder="Ej: Préstamo personal"
                   required
                 />
@@ -396,8 +556,10 @@ export default function DebtsPage() {
                   type="number"
                   min="0"
                   step="0.01"
-                  value={totalAmount}
-                  onChange={(e) => setTotalAmount(parseFloat(e.target.value))}
+                  value={formData.totalAmount}
+                  onChange={(e) =>
+                    setFormData({ ...formData, totalAmount: e.target.value })
+                  }
                   required
                 />
               </div>
@@ -408,35 +570,92 @@ export default function DebtsPage() {
                   type="number"
                   min="0"
                   step="0.01"
-                  value={remainingAmount}
+                  value={formData.remainingAmount}
                   onChange={(e) =>
-                    setRemainingAmount(parseFloat(e.target.value))
+                    setFormData({
+                      ...formData,
+                      remainingAmount: e.target.value,
+                    })
                   }
                   required
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="monthlyPayment">Pago Mensual</Label>
+                <Label htmlFor="monthlyPayment">Monto de Pago</Label>
                 <Input
                   id="monthlyPayment"
                   type="number"
                   min="0"
                   step="0.01"
-                  value={monthlyPayment}
+                  value={formData.monthlyPayment}
                   onChange={(e) =>
-                    setMonthlyPayment(parseFloat(e.target.value))
+                    setFormData({ ...formData, monthlyPayment: e.target.value })
                   }
                   required
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="frequency">Frecuencia de Pago</Label>
+                <Select
+                  value={formData.frequency || "monthly"}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      frequency: value as Debt["frequency"],
+                    })
+                  }
+                >
+                  <SelectTrigger id="frequency">
+                    <SelectValue placeholder="Selecciona una frecuencia" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Diario</SelectItem>
+                    <SelectItem value="weekly">Semanal</SelectItem>
+                    <SelectItem value="biweekly">Quincenal</SelectItem>
+                    <SelectItem value="monthly">Mensual</SelectItem>
+                    <SelectItem value="quarterly">Trimestral</SelectItem>
+                    <SelectItem value="yearly">Anual</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="nextPaymentDate">Fecha del Próximo Pago</Label>
                 <Input
                   id="nextPaymentDate"
                   type="date"
-                  value={nextPaymentDate}
-                  onChange={(e) => setNextPaymentDate(e.target.value)}
+                  value={formData.nextPaymentDate}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      nextPaymentDate: e.target.value,
+                    })
+                  }
                   required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="creditor">Deudor</Label>
+                <Input
+                  id="creditor"
+                  value={formData.creditor}
+                  onChange={(e) =>
+                    setFormData({ ...formData, creditor: e.target.value })
+                  }
+                  placeholder="Ej: Juan Pérez"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="interestRate">Tasa de Interés</Label>
+                <Input
+                  id="interestRate"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.interestRate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, interestRate: e.target.value })
+                  }
+                  placeholder="Ej: 5.5"
                 />
               </div>
             </div>
@@ -446,6 +665,159 @@ export default function DebtsPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de registro de pago */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Registrar pago de deuda</DialogTitle>
+            <DialogDescription>
+              Registra un pago para esta deuda y actualiza su saldo pendiente.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleMakePayment}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="payment-amount" className="text-right">
+                  Monto
+                </Label>
+                <Input
+                  id="payment-amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  className="col-span-3"
+                  value={paymentData.amount}
+                  onChange={(e) =>
+                    setPaymentData({ ...paymentData, amount: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="payment-date" className="text-right">
+                  Fecha
+                </Label>
+                <div className="col-span-3">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {paymentData.date
+                          ? format(new Date(paymentData.date), "PPP", {
+                              locale: es,
+                            })
+                          : "Selecciona una fecha"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={new Date(paymentData.date)}
+                        onSelect={(date) =>
+                          setPaymentData({
+                            ...paymentData,
+                            date:
+                              date?.toISOString() || new Date().toISOString(),
+                          })
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="payment-notes" className="text-right">
+                  Notas
+                </Label>
+                <Textarea
+                  id="payment-notes"
+                  placeholder="Detalles del pago..."
+                  className="col-span-3"
+                  value={paymentData.notes}
+                  onChange={(e) =>
+                    setPaymentData({ ...paymentData, notes: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit">Registrar pago</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de transacciones relacionadas */}
+      <Dialog
+        open={transactionsDialogOpen}
+        onOpenChange={setTransactionsDialogOpen}
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Transacciones relacionadas</DialogTitle>
+            <DialogDescription>
+              Historial de pagos realizados para esta deuda
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {relatedTransactions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No hay transacciones relacionadas con esta deuda
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Descripción</TableHead>
+                    <TableHead>Monto</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {relatedTransactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                      <TableCell>
+                        {format(new Date(transaction.date), "dd MMM yyyy", {
+                          locale: es,
+                        })}
+                      </TableCell>
+                      <TableCell>{transaction.description}</TableCell>
+                      <TableCell>${transaction.amount.toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableCaption>
+                  Total pagado: $
+                  {selectedDebtId
+                    ? getDebtTotalPaid(selectedDebtId).toFixed(2)
+                    : "0.00"}
+                </TableCaption>
+              </Table>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setTransactionsDialogOpen(false)}
+            >
+              Cerrar
+            </Button>
+            <Button
+              onClick={() => {
+                setTransactionsDialogOpen(false);
+                if (selectedDebtId) openPaymentDialog(selectedDebtId);
+              }}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" /> Nuevo pago
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

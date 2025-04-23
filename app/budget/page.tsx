@@ -683,7 +683,7 @@ export default function BudgetPage() {
                   !budgets.some((budget) => budget.category === category.name)
               )
               .map((category) => (
-                <Card key={category.id} className="bg-slate-50">
+                <Card key={category.id}>
                   <CardContent className="pt-4 pb-2">
                     <div className="flex justify-between items-center">
                       <Badge variant="outline">{category.name}</Badge>

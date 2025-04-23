@@ -58,9 +58,10 @@ export default function Dashboard() {
   }
 
   // Calcular el total de deudas (suma de todas las transacciones con categoría "Deudas")
-  const totalDebts = state.transactions
-    .filter((t) => t.type === "expense" && t.category === "Deudas")
-    .reduce((sum, t) => sum + t.amount, 0);
+  const totalDebts = state.debts.reduce((sum, d) => sum + d.remainingAmount, 0);
+  const activeDebtsCount = state.debts.filter(
+    (d) => d.remainingAmount > 0
+  ).length;
 
   // Formatear cantidades monetarias
   const formatAmount = (amount: number) => {
@@ -159,11 +160,13 @@ export default function Dashboard() {
               <div className="text-2xl font-bold">
                 {formatAmount(totalDebts)}
               </div>
-              <p className="text-xs text-muted-foreground">Total de deudas</p>
+              <p className="text-xs text-muted-foreground">
+                {activeDebtsCount} deudas activas
+              </p>
             </CardContent>
             <CardFooter>
               <Button asChild variant="outline" className="w-full">
-                <Link href="/transactions?filterType=expense&filterCategory=Deudas">
+                <Link href="/debts">
                   Ver todas las deudas
                   <ArrowUpRight className="ml-2 h-4 w-4" />
                 </Link>

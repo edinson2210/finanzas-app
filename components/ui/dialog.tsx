@@ -1,18 +1,34 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { X } from "lucide-react"
+import * as React from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-const Dialog = DialogPrimitive.Root
+// Componente para elementos visualmente ocultos pero accesibles para lectores de pantalla
+const VisuallyHidden = React.forwardRef<
+  HTMLSpanElement,
+  React.HTMLAttributes<HTMLSpanElement>
+>(({ className, ...props }, ref) => (
+  <span
+    ref={ref}
+    className={cn(
+      "absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0",
+      className
+    )}
+    {...props}
+  />
+));
+VisuallyHidden.displayName = "VisuallyHidden";
 
-const DialogTrigger = DialogPrimitive.Trigger
+const Dialog = DialogPrimitive.Root;
 
-const DialogPortal = DialogPrimitive.Portal
+const DialogTrigger = DialogPrimitive.Trigger;
 
-const DialogClose = DialogPrimitive.Close
+const DialogPortal = DialogPrimitive.Portal;
+
+const DialogClose = DialogPrimitive.Close;
 
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
@@ -26,8 +42,8 @@ const DialogOverlay = React.forwardRef<
     )}
     {...props}
   />
-))
-DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
+));
+DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
@@ -41,6 +57,8 @@ const DialogContent = React.forwardRef<
         "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
         className
       )}
+      aria-labelledby="dialog-title"
+      aria-describedby="dialog-description"
       {...props}
     >
       {children}
@@ -50,8 +68,8 @@ const DialogContent = React.forwardRef<
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </DialogPortal>
-))
-DialogContent.displayName = DialogPrimitive.Content.displayName
+));
+DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({
   className,
@@ -64,8 +82,8 @@ const DialogHeader = ({
     )}
     {...props}
   />
-)
-DialogHeader.displayName = "DialogHeader"
+);
+DialogHeader.displayName = "DialogHeader";
 
 const DialogFooter = ({
   className,
@@ -78,23 +96,26 @@ const DialogFooter = ({
     )}
     {...props}
   />
-)
-DialogFooter.displayName = "DialogFooter"
+);
+DialogFooter.displayName = "DialogFooter";
 
 const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
->(({ className, ...props }, ref) => (
+>(({ className, children, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
+    id="dialog-title"
     className={cn(
       "text-lg font-semibold leading-none tracking-tight",
       className
     )}
     {...props}
-  />
-))
-DialogTitle.displayName = DialogPrimitive.Title.displayName
+  >
+    {children}
+  </DialogPrimitive.Title>
+));
+DialogTitle.displayName = DialogPrimitive.Title.displayName;
 
 const DialogDescription = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Description>,
@@ -102,11 +123,51 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
+    id="dialog-description"
     className={cn("text-sm text-muted-foreground", className)}
     {...props}
   />
-))
-DialogDescription.displayName = DialogPrimitive.Description.displayName
+));
+DialogDescription.displayName = DialogPrimitive.Description.displayName;
+
+// Componente para proporcionar un título accesible cuando es necesario usar VisuallyHidden
+const DialogAccessibleTitle = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Title>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title> & {
+    visuallyHidden?: boolean;
+  }
+>(({ className, children, visuallyHidden = false, ...props }, ref) => {
+  if (visuallyHidden) {
+    return (
+      <DialogPrimitive.Title
+        ref={ref}
+        id="dialog-title"
+        className={cn(
+          "absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0",
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </DialogPrimitive.Title>
+    );
+  }
+
+  return (
+    <DialogPrimitive.Title
+      ref={ref}
+      id="dialog-title"
+      className={cn(
+        "text-lg font-semibold leading-none tracking-tight",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </DialogPrimitive.Title>
+  );
+});
+DialogAccessibleTitle.displayName = "DialogAccessibleTitle";
 
 export {
   Dialog,
@@ -119,4 +180,6 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-}
+  VisuallyHidden,
+  DialogAccessibleTitle,
+};

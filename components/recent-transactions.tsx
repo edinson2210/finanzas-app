@@ -20,6 +20,15 @@ import { useFinance } from "@/context/finance-context";
 import { useMemo } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import {
+  Table,
+  TableHeader,
+  TableHead,
+  TableBody,
+  TableCell,
+  TableRow,
+} from "@/components/ui/table";
+import { useRouter } from "next/navigation";
 
 // Mapeo de iconos por categoría
 const CATEGORY_ICONS: Record<string, any> = {
@@ -39,6 +48,7 @@ const CATEGORY_ICONS: Record<string, any> = {
 
 export function RecentTransactions() {
   const { state } = useFinance();
+  const router = useRouter();
 
   // Procesar las transacciones recientes
   const recentTransactions = useMemo(() => {
@@ -83,42 +93,58 @@ export function RecentTransactions() {
   }
 
   return (
-    <div className="space-y-4">
-      {recentTransactions.map((transaction) => (
-        <div key={transaction.id} className="flex items-center">
-          <div className="mr-4 flex h-9 w-9 items-center justify-center rounded-full bg-muted">
-            <transaction.icon className="h-4 w-4" />
-          </div>
-          <div className="flex-1 space-y-1">
-            <p className="text-sm font-medium leading-none">
-              {transaction.description}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {transaction.category}
-            </p>
-          </div>
-          <div className="flex flex-col items-end">
-            <p
-              className={cn(
-                "text-sm font-medium",
-                transaction.type === "income"
-                  ? "text-green-500"
-                  : "text-red-500"
-              )}
-            >
-              <span className="inline-flex items-center">
-                {transaction.type === "income" ? (
-                  <ArrowUpRight className="mr-1 h-3 w-3" />
-                ) : (
-                  <ArrowDownLeft className="mr-1 h-3 w-3" />
-                )}
-                {transaction.amount}
-              </span>
-            </p>
-            <p className="text-xs text-muted-foreground">{transaction.date}</p>
-          </div>
+    <div className="overflow-x-auto pb-2">
+      {recentTransactions.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          No hay transacciones recientes.
         </div>
-      ))}
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Descripción</TableHead>
+              <TableHead className="hidden sm:table-cell">Categoría</TableHead>
+              <TableHead className="hidden md:table-cell">Fecha</TableHead>
+              <TableHead className="text-right">Monto</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {recentTransactions
+              .sort(
+                (a, b) =>
+                  new Date(b.date).getTime() - new Date(a.date).getTime()
+              )
+              .slice(0, 5)
+              .map((transaction) => (
+                <TableRow
+                  key={transaction.id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/transactions/${transaction.id}`)}
+                >
+                  <TableCell className="font-medium max-w-[150px] truncate">
+                    {transaction.description}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    {transaction.category}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {transaction.date}
+                  </TableCell>
+                  <TableCell
+                    className={`text-right ${
+                      transaction.type === "expense"
+                        ? "text-red-600"
+                        : "text-green-600"
+                    }`}
+                  >
+                    {transaction.type === "expense" ? "-" : "+"}$
+                    {transaction.amount}
+                  </TableCell>
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
+      )}
     </div>
   );
 }

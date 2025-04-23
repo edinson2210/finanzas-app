@@ -47,7 +47,6 @@ export default function TransactionPage() {
   const transactionTypeFromQuery = searchParams.get("type") as
     | "income"
     | "expense"
-    | "transfer"
     | null;
   const isRecurrent = searchParams.get("recurrent") === "true";
 
@@ -59,7 +58,7 @@ export default function TransactionPage() {
   }, [status, router]);
 
   const [date, setDate] = useState<Date>(new Date());
-  const [type, setType] = useState<"income" | "expense" | "transfer">(
+  const [type, setType] = useState<"income" | "expense">(
     transactionTypeFromQuery || "expense"
   );
   const [description, setDescription] = useState("");
@@ -85,7 +84,8 @@ export default function TransactionPage() {
       );
 
       if (transaction) {
-        setType(transaction.type);
+        // Only set income or expense types, ignore transfer type
+        setType(transaction.type === "income" ? "income" : "expense");
         setDescription(transaction.description);
         setAmount(transaction.amount.toString());
         setCategory(
@@ -254,12 +254,6 @@ export default function TransactionPage() {
                       Ingreso
                     </Label>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="transfer" id="transfer" />
-                    <Label htmlFor="transfer" className="cursor-pointer">
-                      Transferencia
-                    </Label>
-                  </div>
                 </RadioGroup>
               </div>
 
@@ -378,6 +372,7 @@ export default function TransactionPage() {
                     <SelectItem value="none">Sin recurrencia</SelectItem>
                     <SelectItem value="daily">Diaria</SelectItem>
                     <SelectItem value="weekly">Semanal</SelectItem>
+                    <SelectItem value="biweekly">Quincenal</SelectItem>
                     <SelectItem value="monthly">Mensual</SelectItem>
                     <SelectItem value="quarterly">Trimestral</SelectItem>
                     <SelectItem value="yearly">Anual</SelectItem>
