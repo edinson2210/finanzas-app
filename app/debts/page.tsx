@@ -54,6 +54,17 @@ import {
 import { useFinance } from "@/context/finance-context";
 import { Debt, Transaction } from "@/context/finance-context";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function DebtsPage() {
   const router = useRouter();
@@ -95,6 +106,8 @@ export default function DebtsPage() {
   const [relatedTransactions, setRelatedTransactions] = useState<Transaction[]>(
     []
   );
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [debtToDelete, setDebtToDelete] = useState<string | null>(null);
 
   // Redirigir si no está autenticado
   useEffect(() => {
@@ -199,9 +212,14 @@ export default function DebtsPage() {
   };
 
   // Manejar la eliminación de una deuda
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!debtToDelete) return;
+
     try {
-      await deleteDebt(id);
+      await deleteDebt(debtToDelete);
+      setDebtToDelete(null);
+      setDeleteDialogOpen(false);
+
       toast({
         title: "Deuda eliminada",
         description: "La deuda ha sido eliminada correctamente",
@@ -214,6 +232,12 @@ export default function DebtsPage() {
         variant: "destructive",
       });
     }
+  };
+
+  // Abrir diálogo de eliminación de deuda
+  const handleDeleteClick = (id: string) => {
+    setDebtToDelete(id);
+    setDeleteDialogOpen(true);
   };
 
   // Función para manejar el pago de una deuda
@@ -592,7 +616,7 @@ export default function DebtsPage() {
                             variant="outline"
                             size="sm"
                             className="text-red-500 hover:text-red-700"
-                            onClick={() => handleDelete(debt.id)}
+                            onClick={() => handleDeleteClick(debt.id)}
                           >
                             <Trash className="h-3.5 w-3.5" />
                           </Button>
@@ -935,6 +959,30 @@ export default function DebtsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Diálogo de confirmación para eliminar deuda */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará la deuda permanentemente y no se puede
+              deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDebtToDelete(null)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

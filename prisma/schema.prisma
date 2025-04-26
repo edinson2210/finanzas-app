@@ -116,6 +116,10 @@ model Debt {
   monthlyPayment  Float
   nextPaymentDate DateTime
   frequency       String?  @default("monthly") // "daily", "weekly", "biweekly", "monthly", "quarterly", "yearly"
+  creditor        String?
+  interestRate    Float?
+  interestFrequency String? @default("monthly") // "weekly", "biweekly", "monthly", "quarterly", "yearly"
+  linkedTransactions String? // Almacenado como JSON string con IDs de transacciones
   
   // Relación con el usuario
   userId          String

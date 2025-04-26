@@ -505,8 +505,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       // Cargar configuración
       await fetchSettings();
 
-      // Cargar deudas - Implementar en el futuro
-      // await fetchDebts();
+      // Cargar deudas
+      await fetchDebts();
 
       // Cargar presupuestos
       await fetchBudgets();
@@ -594,6 +594,27 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Función para cargar deudas desde la API
+  const fetchDebts = async () => {
+    dispatch({ type: "FETCH_DEBTS_REQUEST" });
+    try {
+      const response = await fetch("/api/debts");
+
+      if (!response.ok) {
+        throw new Error("Error al obtener deudas");
+      }
+
+      const data = await response.json();
+      dispatch({ type: "FETCH_DEBTS_SUCCESS", payload: data });
+    } catch (error: any) {
+      console.error("Error al cargar deudas:", error);
+      dispatch({
+        type: "FETCH_DEBTS_FAILURE",
+        payload: error.message || "Error al cargar deudas",
+      });
+    }
+  };
+
   // Función para cargar presupuestos desde la API
   const fetchBudgets = async () => {
     dispatch({ type: "FETCH_BUDGETS_REQUEST" });
@@ -620,19 +641,30 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     transaction: Omit<Transaction, "id">
   ): Promise<Transaction> => {
     try {
-      const newTransaction: Transaction = {
-        ...transaction,
-        id: Date.now().toString(36) + Math.random().toString(36).substring(2),
-      };
+      const response = await fetch("/api/transactions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(transaction),
+      });
 
-      // Añadirla al estado mientras se procesa la API
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Error al crear la transacción");
+      }
+
+      const newTransaction = await response.json();
       dispatch({ type: "ADD_TRANSACTION", payload: newTransaction });
 
-      // Aquí iría la llamada a la API para guardar en el servidor
-
       return newTransaction;
-    } catch (error) {
-      console.error("Error al añadir la transacción:", error);
+    } catch (error: any) {
+      console.error("Error al crear transacción:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al crear la transacción",
+        variant: "destructive",
+      });
       throw error;
     }
   };
@@ -658,11 +690,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         type: "UPDATE_TRANSACTION",
         payload: { id, data: updatedTransaction },
       });
-
-      toast({
-        title: "Transacción actualizada",
-        description: "La transacción se ha actualizado correctamente.",
-      });
     } catch (error: any) {
       console.error("Error al actualizar transacción:", error);
       toast({
@@ -670,6 +697,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         description: error.message || "Error al actualizar la transacción",
         variant: "destructive",
       });
+      throw error;
     }
   };
 
@@ -686,11 +714,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }
 
       dispatch({ type: "DELETE_TRANSACTION", payload: id });
-
-      toast({
-        title: "Transacción eliminada",
-        description: "La transacción se ha eliminado correctamente.",
-      });
     } catch (error: any) {
       console.error("Error al eliminar transacción:", error);
       toast({
@@ -698,28 +721,96 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         description: error.message || "Error al eliminar la transacción",
         variant: "destructive",
       });
+      throw error;
     }
   };
 
   const addDebt = async (debt: Omit<Debt, "id">) => {
-    // Implementación temporal hasta que se cree el endpoint
-    const newDebt = {
-      ...debt,
-      id: Date.now().toString(36) + Math.random().toString(36).substring(2),
-      linkedTransactions: debt.linkedTransactions || [],
-    };
-    dispatch({ type: "ADD_DEBT", payload: newDebt });
-    return Promise.resolve();
+    try {
+      const response = await fetch("/api/debts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(debt),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Error al crear la deuda");
+      }
+
+      const newDebt = await response.json();
+      dispatch({ type: "ADD_DEBT", payload: newDebt });
+      
+      return Promise.resolve();
+    } catch (error: any) {
+      console.error("Error al crear deuda:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al crear la deuda",
+        variant: "destructive",
+      });
+      return Promise.reject(error);
+    }
   };
 
   const updateDebt = async (id: string, data: Partial<Debt>) => {
-    dispatch({ type: "UPDATE_DEBT", payload: { id, data } });
-    return Promise.resolve();
+    try {
+      const response = await fetch(`/api/debts?id=${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Error al actualizar la deuda");
+      }
+
+      const updatedDebt = await response.json();
+      dispatch({
+        type: "UPDATE_DEBT",
+        payload: { id, data: updatedDebt },
+      });
+      
+      return Promise.resolve();
+    } catch (error: any) {
+      console.error("Error al actualizar deuda:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al actualizar la deuda",
+        variant: "destructive",
+      });
+      return Promise.reject(error);
+    }
   };
 
   const deleteDebt = async (id: string) => {
-    dispatch({ type: "DELETE_DEBT", payload: id });
-    return Promise.resolve();
+    try {
+      const response = await fetch(`/api/debts?id=${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Error al eliminar la deuda");
+      }
+
+      dispatch({ type: "DELETE_DEBT", payload: id });
+      
+      return Promise.resolve();
+    } catch (error: any) {
+      console.error("Error al eliminar deuda:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al eliminar la deuda",
+        variant: "destructive",
+      });
+      return Promise.reject(error);
+    }
   };
 
   // Nueva función para añadir un pago a una deuda
