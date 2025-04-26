@@ -74,23 +74,71 @@ export default function AnalyticsPage() {
       const monthEnd = endOfMonth(month);
       const monthLabel = format(month, "MMM yyyy", { locale: es });
 
-      const income = state.transactions
-        .filter(
-          (t) =>
-            t.type === "income" &&
-            new Date(t.date) >= monthStart &&
-            new Date(t.date) <= monthEnd
-        )
-        .reduce((sum, t) => sum + t.amount, 0);
+      // Obtener transacciones del mes
+      const incomeTransactions = state.transactions.filter(
+        (t) =>
+          t.type === "income" &&
+          new Date(t.date) >= monthStart &&
+          new Date(t.date) <= monthEnd
+      );
 
-      const expense = state.transactions
-        .filter(
-          (t) =>
-            t.type === "expense" &&
-            new Date(t.date) >= monthStart &&
-            new Date(t.date) <= monthEnd
-        )
-        .reduce((sum, t) => sum + t.amount, 0);
+      const expenseTransactions = state.transactions.filter(
+        (t) =>
+          t.type === "expense" &&
+          new Date(t.date) >= monthStart &&
+          new Date(t.date) <= monthEnd
+      );
+
+      // Calcular valores ajustados por recurrencia
+      const income = incomeTransactions.reduce((sum, t) => {
+        let monthlyValue = t.amount;
+        if (t.recurrence) {
+          switch (t.recurrence) {
+            case "daily":
+              monthlyValue = t.amount * 30; // Aproximado mensual
+              break;
+            case "weekly":
+              monthlyValue = t.amount * 4.33; // Semanas promedio en un mes
+              break;
+            case "biweekly":
+              monthlyValue = t.amount * 2; // Dos veces al mes
+              break;
+            case "quarterly":
+              monthlyValue = t.amount / 3; // Un tercio por mes
+              break;
+            case "yearly":
+              monthlyValue = t.amount / 12; // Un doceavo por mes
+              break;
+            // Para 'monthly' y 'none' se mantiene el valor original
+          }
+        }
+        return sum + monthlyValue;
+      }, 0);
+
+      const expense = expenseTransactions.reduce((sum, t) => {
+        let monthlyValue = t.amount;
+        if (t.recurrence) {
+          switch (t.recurrence) {
+            case "daily":
+              monthlyValue = t.amount * 30; // Aproximado mensual
+              break;
+            case "weekly":
+              monthlyValue = t.amount * 4.33; // Semanas promedio en un mes
+              break;
+            case "biweekly":
+              monthlyValue = t.amount * 2; // Dos veces al mes
+              break;
+            case "quarterly":
+              monthlyValue = t.amount / 3; // Un tercio por mes
+              break;
+            case "yearly":
+              monthlyValue = t.amount / 12; // Un doceavo por mes
+              break;
+            // Para 'monthly' y 'none' se mantiene el valor original
+          }
+        }
+        return sum + monthlyValue;
+      }, 0);
 
       return {
         name: monthLabel,

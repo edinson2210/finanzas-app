@@ -143,15 +143,57 @@ export default function ExpensesPage() {
       setVariableExpenses(variable);
 
       // Calcular totales
-      const totalAmount = sortedExpenses.reduce(
-        (sum, expense) => sum + expense.amount,
-        0
-      );
+      const totalAmount = sortedExpenses.reduce((sum, expense) => {
+        // Convertir a valor mensual según la frecuencia de recurrencia
+        let monthlyValue = expense.amount;
+        if (expense.recurrence) {
+          switch (expense.recurrence) {
+            case "daily":
+              monthlyValue = expense.amount * 30; // Aproximado mensual
+              break;
+            case "weekly":
+              monthlyValue = expense.amount * 4.33; // Semanas promedio en un mes
+              break;
+            case "biweekly":
+              monthlyValue = expense.amount * 2; // Dos veces al mes
+              break;
+            case "quarterly":
+              monthlyValue = expense.amount / 3; // Un tercio por mes
+              break;
+            case "yearly":
+              monthlyValue = expense.amount / 12; // Un doceavo por mes
+              break;
+            // Para 'monthly' y 'none' se mantiene el valor original
+          }
+        }
+        return sum + monthlyValue;
+      }, 0);
 
-      const totalFixedAmount = fixed.reduce(
-        (sum, expense) => sum + expense.amount,
-        0
-      );
+      const totalFixedAmount = fixed.reduce((sum, expense) => {
+        // Convertir a valor mensual según la frecuencia de recurrencia
+        let monthlyValue = expense.amount;
+        if (expense.recurrence) {
+          switch (expense.recurrence) {
+            case "daily":
+              monthlyValue = expense.amount * 30; // Aproximado mensual
+              break;
+            case "weekly":
+              monthlyValue = expense.amount * 4.33; // Semanas promedio en un mes
+              break;
+            case "biweekly":
+              monthlyValue = expense.amount * 2; // Dos veces al mes
+              break;
+            case "quarterly":
+              monthlyValue = expense.amount / 3; // Un tercio por mes
+              break;
+            case "yearly":
+              monthlyValue = expense.amount / 12; // Un doceavo por mes
+              break;
+            // Para 'monthly' se mantiene el valor original
+          }
+        }
+        return sum + monthlyValue;
+      }, 0);
 
       const totalVariableAmount = variable.reduce(
         (sum, expense) => sum + expense.amount,
@@ -408,6 +450,16 @@ export default function ExpensesPage() {
               </Card>
             );
           })}
+        </div>
+        <div className="text-xs text-muted-foreground mt-1">
+          {topCategories.map(([category, amount], index) => (
+            <div key={index}>
+              {category}: ${amount.toFixed(2)}
+            </div>
+          ))}
+          <div className="mt-1 font-medium">
+            (Valores ajustados a equivalente mensual)
+          </div>
         </div>
       </div>
 

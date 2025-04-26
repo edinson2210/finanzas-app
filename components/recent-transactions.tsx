@@ -137,7 +137,6 @@ export function RecentTransactions() {
                         : "text-green-600"
                     }`}
                   >
-                    {transaction.type === "expense" ? "-" : "+"}$
                     {transaction.amount}
                   </TableCell>
                 </TableRow>

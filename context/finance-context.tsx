@@ -742,7 +742,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
       const newDebt = await response.json();
       dispatch({ type: "ADD_DEBT", payload: newDebt });
-      
+
       return Promise.resolve();
     } catch (error: any) {
       console.error("Error al crear deuda:", error);
@@ -775,7 +775,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         type: "UPDATE_DEBT",
         payload: { id, data: updatedDebt },
       });
-      
+
       return Promise.resolve();
     } catch (error: any) {
       console.error("Error al actualizar deuda:", error);
@@ -800,7 +800,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }
 
       dispatch({ type: "DELETE_DEBT", payload: id });
-      
+
       return Promise.resolve();
     } catch (error: any) {
       console.error("Error al eliminar deuda:", error);
@@ -969,17 +969,59 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getTotalIncome = () => {
-    return getIncomes().reduce(
-      (acc, transaction) => acc + transaction.amount,
-      0
-    );
+    return getIncomes().reduce((acc, transaction) => {
+      // Convertir a valor mensual según la frecuencia de recurrencia
+      let monthlyValue = transaction.amount;
+      if (transaction.recurrence) {
+        switch (transaction.recurrence) {
+          case "daily":
+            monthlyValue = transaction.amount * 30; // Aproximado mensual
+            break;
+          case "weekly":
+            monthlyValue = transaction.amount * 4.33; // Semanas promedio en un mes
+            break;
+          case "biweekly":
+            monthlyValue = transaction.amount * 2; // Dos veces al mes
+            break;
+          case "quarterly":
+            monthlyValue = transaction.amount / 3; // Un tercio por mes
+            break;
+          case "yearly":
+            monthlyValue = transaction.amount / 12; // Un doceavo por mes
+            break;
+          // Para 'monthly' y 'none' se mantiene el valor original
+        }
+      }
+      return acc + monthlyValue;
+    }, 0);
   };
 
   const getTotalExpenses = () => {
-    return getExpenses().reduce(
-      (acc, transaction) => acc + transaction.amount,
-      0
-    );
+    return getExpenses().reduce((acc, transaction) => {
+      // Convertir a valor mensual según la frecuencia de recurrencia
+      let monthlyValue = transaction.amount;
+      if (transaction.recurrence) {
+        switch (transaction.recurrence) {
+          case "daily":
+            monthlyValue = transaction.amount * 30; // Aproximado mensual
+            break;
+          case "weekly":
+            monthlyValue = transaction.amount * 4.33; // Semanas promedio en un mes
+            break;
+          case "biweekly":
+            monthlyValue = transaction.amount * 2; // Dos veces al mes
+            break;
+          case "quarterly":
+            monthlyValue = transaction.amount / 3; // Un tercio por mes
+            break;
+          case "yearly":
+            monthlyValue = transaction.amount / 12; // Un doceavo por mes
+            break;
+          // Para 'monthly' y 'none' se mantiene el valor original
+        }
+      }
+      return acc + monthlyValue;
+    }, 0);
   };
 
   const getUpcomingPayments = (days = 30) => {

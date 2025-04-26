@@ -305,10 +305,34 @@ export default function DebtsPage() {
     (sum, d) => sum + d.remainingAmount,
     0
   );
-  const totalMonthly = state.debts.reduce(
-    (sum, d) => sum + d.monthlyPayment,
-    0
-  );
+
+  // Calcular el total de pagos mensuales considerando la frecuencia
+  const totalMonthly = state.debts.reduce((sum, d) => {
+    let monthlyPayment = d.monthlyPayment;
+
+    // Ajustar según frecuencia
+    switch (d.frequency) {
+      case "daily":
+        monthlyPayment = d.monthlyPayment * 30; // Aproximado mensual
+        break;
+      case "weekly":
+        monthlyPayment = d.monthlyPayment * 4.33; // Semanas promedio en un mes
+        break;
+      case "biweekly":
+        monthlyPayment = d.monthlyPayment * 2; // Dos veces al mes
+        break;
+      case "quarterly":
+        monthlyPayment = d.monthlyPayment / 3; // Un tercio por mes
+        break;
+      case "yearly":
+        monthlyPayment = d.monthlyPayment / 12; // Un doceavo por mes
+        break;
+      // Para 'monthly' se mantiene el valor original
+    }
+
+    return sum + monthlyPayment;
+  }, 0);
+
   const debtPaid =
     totalDebt > 0 ? ((totalDebt - totalRemaining) / totalDebt) * 100 : 0;
 
@@ -380,7 +404,7 @@ export default function DebtsPage() {
           <CardContent>
             <div className="text-2xl font-bold">${totalMonthly.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
-              Total de pagos mensuales
+              Total de pagos (ajustado a valor mensual)
             </p>
           </CardContent>
         </Card>
@@ -515,6 +539,11 @@ export default function DebtsPage() {
                           <div>Total: ${debt.totalAmount.toLocaleString()}</div>
                           <div>
                             Cuota: ${debt.monthlyPayment.toLocaleString()}
+                            {debt.frequency && debt.frequency !== "monthly" && (
+                              <span className="text-muted-foreground ml-1">
+                                ({getFrequencyText(debt.frequency)})
+                              </span>
+                            )}
                           </div>
                           <div>Próximo: {formatDate(debt.nextPaymentDate)}</div>
                         </div>
@@ -539,6 +568,11 @@ export default function DebtsPage() {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}
+                        {debt.frequency && debt.frequency !== "monthly" && (
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({getFrequencyText(debt.frequency)})
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {debt.interestRate ? (

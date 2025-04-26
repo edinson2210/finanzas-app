@@ -249,32 +249,31 @@ export default function Dashboard() {
                   {state.transactions.filter(
                     (t) => t.type === "expense" && t.recurrence !== "none"
                   ).length > 0 ? (
-                    <div className="space-y-4">
+                    <div className="space-y-8">
                       {state.transactions
                         .filter(
                           (t) => t.type === "expense" && t.recurrence !== "none"
                         )
                         .slice(0, 4)
-                        .map((payment, index) => (
-                          <div
-                            key={payment.id}
-                            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
-                          >
-                            <div className="space-y-1">
+                        .map((payment) => (
+                          <div key={payment.id} className="flex items-start">
+                            <div className="flex-1 space-y-1">
                               <p className="text-sm font-medium leading-none">
                                 {payment.description}
                               </p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-sm text-muted-foreground">
                                 {new Date(payment.date).toLocaleDateString()}
                               </p>
                             </div>
-                            <div className="flex items-center justify-between sm:justify-end gap-2">
-                              <div className="font-medium">
+                            <div className="ml-4 flex flex-col items-end space-y-1">
+                              <p className="text-sm font-medium leading-none">
                                 {formatAmount(payment.amount)}
-                              </div>
-                              <Button variant="outline" size="sm">
-                                Pagar
-                              </Button>
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {payment.recurrence !== "none"
+                                  ? payment.recurrence
+                                  : "No recurrente"}
+                              </p>
                             </div>
                           </div>
                         ))}

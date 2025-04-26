@@ -119,14 +119,58 @@ export default function IncomePage() {
   );
 
   // Calcular totales
-  const totalIncome = allIncomes.reduce(
-    (sum, income) => sum + income.amount,
-    0
-  );
-  const totalFixedIncome = fixedIncomes.reduce(
-    (sum, income) => sum + income.amount,
-    0
-  );
+  const totalIncome = allIncomes.reduce((sum, income) => {
+    // Convertir a valor mensual según la frecuencia de recurrencia
+    let monthlyValue = income.amount;
+    if (income.recurrence) {
+      switch (income.recurrence) {
+        case "daily":
+          monthlyValue = income.amount * 30; // Aproximado mensual
+          break;
+        case "weekly":
+          monthlyValue = income.amount * 4.33; // Semanas promedio en un mes
+          break;
+        case "biweekly":
+          monthlyValue = income.amount * 2; // Dos veces al mes
+          break;
+        case "quarterly":
+          monthlyValue = income.amount / 3; // Un tercio por mes
+          break;
+        case "yearly":
+          monthlyValue = income.amount / 12; // Un doceavo por mes
+          break;
+        // Para 'monthly' y 'none' se mantiene el valor original
+      }
+    }
+    return sum + monthlyValue;
+  }, 0);
+
+  const totalFixedIncome = fixedIncomes.reduce((sum, income) => {
+    // Convertir a valor mensual según la frecuencia de recurrencia
+    let monthlyValue = income.amount;
+    if (income.recurrence) {
+      switch (income.recurrence) {
+        case "daily":
+          monthlyValue = income.amount * 30; // Aproximado mensual
+          break;
+        case "weekly":
+          monthlyValue = income.amount * 4.33; // Semanas promedio en un mes
+          break;
+        case "biweekly":
+          monthlyValue = income.amount * 2; // Dos veces al mes
+          break;
+        case "quarterly":
+          monthlyValue = income.amount / 3; // Un tercio por mes
+          break;
+        case "yearly":
+          monthlyValue = income.amount / 12; // Un doceavo por mes
+          break;
+        // Para 'monthly' se mantiene el valor original
+      }
+    }
+    return sum + monthlyValue;
+  }, 0);
+
   const totalExtraIncome = extraIncomes.reduce(
     (sum, income) => sum + income.amount,
     0
@@ -228,7 +272,8 @@ export default function IncomePage() {
                 {percentageChange > 0 ? "+" : ""}
                 {percentageChange.toFixed(1)}%
               </span>{" "}
-              desde el mes pasado
+              desde el mes pasado <br />
+              <span>(valores ajustados a equivalente mensual)</span>
             </p>
           </CardContent>
         </Card>
