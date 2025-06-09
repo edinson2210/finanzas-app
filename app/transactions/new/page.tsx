@@ -35,6 +35,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { useFinance } from "@/context/finance-context";
+import { getRecurrenceLabel } from "@/lib/recurrence-utils";
+import { getCategoryIcon } from "@/lib/category-utils";
 
 export default function TransactionPage() {
   const router = useRouter();
@@ -315,11 +317,22 @@ export default function TransactionPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {filteredCategories.length > 0 ? (
-                        filteredCategories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.name}>
-                            {cat.name}
-                          </SelectItem>
-                        ))
+                        filteredCategories.map((cat) => {
+                          const IconComponent = getCategoryIcon(cat.icon);
+                          return (
+                            <SelectItem key={cat.id} value={cat.name}>
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-4 h-4 rounded-full flex items-center justify-center"
+                                  style={{ backgroundColor: cat.color }}
+                                >
+                                  <IconComponent className="h-2.5 w-2.5 text-white" />
+                                </div>
+                                {cat.name}
+                              </div>
+                            </SelectItem>
+                          );
+                        })
                       ) : (
                         <SelectItem value="none" disabled>
                           No hay categorías disponibles

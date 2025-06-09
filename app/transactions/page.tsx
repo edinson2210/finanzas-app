@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useFinance } from "@/context/finance-context";
+import { getCategoryIconByName } from "@/lib/category-utils";
 
 export default function TransactionsPage() {
   const router = useRouter();
@@ -261,7 +262,16 @@ export default function TransactionsPage() {
                           {tx.description}
                         </TableCell>
                         <TableCell className="hidden sm:table-cell">
-                          {tx.category}
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const IconComponent = getCategoryIconByName(
+                                tx.category,
+                                state.categories
+                              );
+                              return <IconComponent className="h-3 w-3" />;
+                            })()}
+                            {tx.category}
+                          </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           {formatDate(tx.date)}

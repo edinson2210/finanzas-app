@@ -60,6 +60,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
+import { getCategoryIcon } from "@/lib/category-utils";
 
 export default function CategoriesPage() {
   const router = useRouter();
@@ -623,55 +624,66 @@ export default function CategoriesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nombre</TableHead>
+                    <TableHead>Categoría</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Color</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCategories.map((category) => (
-                    <TableRow key={category.id}>
-                      <TableCell className="font-medium">
-                        {category.name}
-                      </TableCell>
-                      <TableCell>
-                        {category.type === "income"
-                          ? "Ingreso"
-                          : category.type === "expense"
-                          ? "Gasto"
-                          : "Ambos"}
-                      </TableCell>
-                      <TableCell>
-                        <div
-                          className="w-6 h-6 rounded-full"
-                          style={{ backgroundColor: category.color }}
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Editar categoría"
-                            onClick={() => handleEditClick(category)}
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Editar</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Eliminar categoría"
-                            onClick={() => handleDeleteClick(category)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Eliminar</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredCategories.map((category) => {
+                    const IconComponent = getCategoryIcon(category.icon);
+                    return (
+                      <TableRow key={category.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center"
+                              style={{ backgroundColor: category.color }}
+                            >
+                              <IconComponent className="h-4 w-4 text-white" />
+                            </div>
+                            {category.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {category.type === "income"
+                            ? "Ingreso"
+                            : category.type === "expense"
+                            ? "Gasto"
+                            : "Ambos"}
+                        </TableCell>
+                        <TableCell>
+                          <div
+                            className="w-6 h-6 rounded-full"
+                            style={{ backgroundColor: category.color }}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Editar categoría"
+                              onClick={() => handleEditClick(category)}
+                            >
+                              <Edit className="h-4 w-4" />
+                              <span className="sr-only">Editar</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Eliminar categoría"
+                              onClick={() => handleDeleteClick(category)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Eliminar</span>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             ) : (

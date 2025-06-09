@@ -71,6 +71,8 @@ import {
 import { useFinance } from "@/context/finance-context";
 import { cn } from "@/lib/utils";
 import { Budget } from "@/context/finance-context";
+import { getRecurrenceLabel } from "@/lib/recurrence-utils";
+import { getCategoryIconByName } from "@/lib/category-utils";
 
 // Definir el esquema de validación para el formulario de presupuesto
 const budgetFormSchema = z.object({
@@ -267,11 +269,11 @@ export default function BudgetPage() {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
         <h1 className="text-3xl font-bold">Presupuestos</h1>
         <Dialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" /> Nuevo Presupuesto
             </Button>
           </DialogTrigger>
@@ -475,7 +477,19 @@ export default function BudgetPage() {
                 sortedBudgets.map((budget) => (
                   <TableRow key={budget.id}>
                     <TableCell className="font-medium">
-                      <Badge variant="outline">{budget.category}</Badge>
+                      <Badge
+                        variant="outline"
+                        className="flex items-center gap-2 w-fit"
+                      >
+                        {(() => {
+                          const IconComponent = getCategoryIconByName(
+                            budget.category,
+                            state.categories
+                          );
+                          return <IconComponent className="h-3 w-3" />;
+                        })()}
+                        {budget.category}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge>
@@ -686,7 +700,19 @@ export default function BudgetPage() {
                 <Card key={category.id}>
                   <CardContent className="pt-4 pb-2">
                     <div className="flex justify-between items-center">
-                      <Badge variant="outline">{category.name}</Badge>
+                      <Badge
+                        variant="outline"
+                        className="flex items-center gap-2"
+                      >
+                        {(() => {
+                          const IconComponent = getCategoryIconByName(
+                            category.name,
+                            state.categories
+                          );
+                          return <IconComponent className="h-3 w-3" />;
+                        })()}
+                        {category.name}
+                      </Badge>
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button

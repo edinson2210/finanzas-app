@@ -26,6 +26,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { useFinance } from "@/context/finance-context";
 import { cn } from "@/lib/utils";
+import { getRecurrenceLabel } from "@/lib/recurrence-utils";
+import { getCategoryIconByName } from "@/lib/category-utils";
 
 import {
   AlertDialog,
@@ -375,7 +377,19 @@ export default function IncomePage() {
                           {income.description}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{income.category}</Badge>
+                          <Badge
+                            variant="outline"
+                            className="flex items-center gap-2 w-fit"
+                          >
+                            {(() => {
+                              const IconComponent = getCategoryIconByName(
+                                income.category,
+                                state.categories
+                              );
+                              return <IconComponent className="h-3 w-3" />;
+                            })()}
+                            {income.category}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           {format(new Date(income.date), "dd MMM yyyy", {
@@ -384,7 +398,9 @@ export default function IncomePage() {
                         </TableCell>
                         <TableCell>
                           {income.recurrence && income.recurrence !== "none" ? (
-                            <Badge>{income.recurrence}</Badge>
+                            <Badge>
+                              {getRecurrenceLabel(income.recurrence)}
+                            </Badge>
                           ) : (
                             "—"
                           )}
@@ -468,10 +484,22 @@ export default function IncomePage() {
                           {income.description}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{income.category}</Badge>
+                          <Badge
+                            variant="outline"
+                            className="flex items-center gap-2 w-fit"
+                          >
+                            {(() => {
+                              const IconComponent = getCategoryIconByName(
+                                income.category,
+                                state.categories
+                              );
+                              return <IconComponent className="h-3 w-3" />;
+                            })()}
+                            {income.category}
+                          </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge>{income.recurrence}</Badge>
+                          <Badge>{getRecurrenceLabel(income.recurrence)}</Badge>
                         </TableCell>
                         <TableCell className="text-right font-bold text-green-600">
                           ${income.amount.toFixed(2)}
@@ -559,7 +587,19 @@ export default function IncomePage() {
                           {income.description}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{income.category}</Badge>
+                          <Badge
+                            variant="outline"
+                            className="flex items-center gap-2 w-fit"
+                          >
+                            {(() => {
+                              const IconComponent = getCategoryIconByName(
+                                income.category,
+                                state.categories
+                              );
+                              return <IconComponent className="h-3 w-3" />;
+                            })()}
+                            {income.category}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           {format(new Date(income.date), "dd MMM yyyy", {

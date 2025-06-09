@@ -28,6 +28,8 @@ import { Progress } from "@/components/ui/progress";
 import { useFinance } from "@/context/finance-context";
 import { Transaction, Budget, Category } from "@/context/finance-context";
 import { cn } from "@/lib/utils";
+import { getRecurrenceLabel } from "@/lib/recurrence-utils";
+import { getCategoryIconByName } from "@/lib/category-utils";
 
 import {
   AlertDialog,
@@ -413,7 +415,17 @@ export default function ExpensesPage() {
                 <CardContent className="pt-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center">
-                      <Badge variant="outline" className="mr-2">
+                      <Badge
+                        variant="outline"
+                        className="mr-2 flex items-center gap-2"
+                      >
+                        {(() => {
+                          const IconComponent = getCategoryIconByName(
+                            category,
+                            state.categories
+                          );
+                          return <IconComponent className="h-3 w-3" />;
+                        })()}
                         {category}
                       </Badge>
                       <span className="font-medium">${amount.toFixed(2)}</span>
@@ -513,7 +525,17 @@ export default function ExpensesPage() {
                           {expense.description}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">
+                          <Badge
+                            variant="outline"
+                            className="flex items-center gap-2 w-fit"
+                          >
+                            {(() => {
+                              const IconComponent = getCategoryIconByName(
+                                expense.category,
+                                state.categories
+                              );
+                              return <IconComponent className="h-3 w-3" />;
+                            })()}
                             {getCategoryName(expense.category)}
                           </Badge>
                         </TableCell>
@@ -525,7 +547,9 @@ export default function ExpensesPage() {
                         <TableCell>
                           {expense.recurrence &&
                           expense.recurrence !== "none" ? (
-                            <Badge>{expense.recurrence}</Badge>
+                            <Badge>
+                              {getRecurrenceLabel(expense.recurrence)}
+                            </Badge>
                           ) : (
                             "—"
                           )}
@@ -609,12 +633,24 @@ export default function ExpensesPage() {
                           {expense.description}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">
+                          <Badge
+                            variant="outline"
+                            className="flex items-center gap-2 w-fit"
+                          >
+                            {(() => {
+                              const IconComponent = getCategoryIconByName(
+                                expense.category,
+                                state.categories
+                              );
+                              return <IconComponent className="h-3 w-3" />;
+                            })()}
                             {getCategoryName(expense.category)}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge>{expense.recurrence}</Badge>
+                          <Badge>
+                            {getRecurrenceLabel(expense.recurrence)}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-right font-bold text-red-600">
                           -${expense.amount.toFixed(2)}
@@ -702,7 +738,17 @@ export default function ExpensesPage() {
                           {expense.description}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">
+                          <Badge
+                            variant="outline"
+                            className="flex items-center gap-2 w-fit"
+                          >
+                            {(() => {
+                              const IconComponent = getCategoryIconByName(
+                                expense.category,
+                                state.categories
+                              );
+                              return <IconComponent className="h-3 w-3" />;
+                            })()}
                             {getCategoryName(expense.category)}
                           </Badge>
                         </TableCell>

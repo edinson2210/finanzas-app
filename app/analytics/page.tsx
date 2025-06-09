@@ -41,6 +41,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTheme } from "next-themes";
 import { useFinance } from "@/context/finance-context";
+import { getRecurrenceLabel } from "@/lib/recurrence-utils";
 
 export default function AnalyticsPage() {
   const router = useRouter();

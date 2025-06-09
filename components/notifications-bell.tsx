@@ -158,40 +158,43 @@ export function NotificationsBell() {
             <div className="py-6 text-center text-muted-foreground">
               Cargando notificaciones...
             </div>
-          ) : notifications.length === 0 ? (
+          ) : notifications.filter((n) => n.status === "unread").length ===
+            0 ? (
             <div className="py-6 text-center text-muted-foreground">
-              No tienes notificaciones
+              No tienes notificaciones sin leer
             </div>
           ) : (
-            notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={cn(
-                  "p-4 border-b last:border-0 cursor-pointer hover:bg-muted/50 transition-colors",
-                  notification.status === "unread" && "bg-muted/20"
-                )}
-                onClick={() => markAsRead(notification.id)}
-              >
-                <div className="flex gap-3">
-                  <div className="text-xl">
-                    {getNotificationIcon(notification.type)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <h5 className="font-medium text-sm">
-                        {notification.title}
-                      </h5>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {formatDate(notification.date)}
-                      </span>
+            notifications
+              .filter((n) => n.status === "unread")
+              .map((notification) => (
+                <div
+                  key={notification.id}
+                  className={cn(
+                    "p-4 border-b last:border-0 cursor-pointer hover:bg-muted/50 transition-colors",
+                    notification.status === "unread" && "bg-muted/20"
+                  )}
+                  onClick={() => markAsRead(notification.id)}
+                >
+                  <div className="flex gap-3">
+                    <div className="text-xl">
+                      {getNotificationIcon(notification.type)}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {notification.message}
-                    </p>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h5 className="font-medium text-sm">
+                          {notification.title}
+                        </h5>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDate(notification.date)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {notification.message}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              ))
           )}
         </div>
       </PopoverContent>

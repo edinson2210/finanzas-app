@@ -714,6 +714,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       }
 
       dispatch({ type: "DELETE_TRANSACTION", payload: id });
+
+      toast({
+        title: "Transacción eliminada",
+        description: "La transacción ha sido eliminada correctamente",
+      });
     } catch (error: any) {
       console.error("Error al eliminar transacción:", error);
       toast({

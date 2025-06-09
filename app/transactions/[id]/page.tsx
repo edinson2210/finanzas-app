@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { useFinance, Transaction } from "@/context/finance-context";
+import { getRecurrenceLabel } from "@/lib/recurrence-utils";
+import { getCategoryIconByName } from "@/lib/category-utils";
 
 export default function TransactionDetailsPage() {
   const router = useRouter();
@@ -180,25 +182,8 @@ export default function TransactionDetailsPage() {
   };
 
   // Traducir la recurrencia
-  const getRecurrenceLabel = () => {
-    if (!transaction.recurrence || transaction.recurrence === "none") {
-      return "No recurrente";
-    }
-
-    switch (transaction.recurrence) {
-      case "daily":
-        return "Diaria";
-      case "weekly":
-        return "Semanal";
-      case "monthly":
-        return "Mensual";
-      case "quarterly":
-        return "Trimestral";
-      case "yearly":
-        return "Anual";
-      default:
-        return transaction.recurrence;
-    }
+  const getRecurrenceLabelText = () => {
+    return getRecurrenceLabel(transaction.recurrence);
   };
 
   // Función para obtener el nombre de la categoría de manera segura
@@ -306,7 +291,17 @@ export default function TransactionDetailsPage() {
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">
                   Categoría
                 </h3>
-                <Badge variant="outline" className="text-base px-3 py-1">
+                <Badge
+                  variant="outline"
+                  className="text-base px-3 py-1 flex items-center gap-2 w-fit"
+                >
+                  {(() => {
+                    const IconComponent = getCategoryIconByName(
+                      transaction.category,
+                      state.categories
+                    );
+                    return <IconComponent className="h-4 w-4" />;
+                  })()}
                   {getCategoryName(transaction.category)}
                 </Badge>
               </div>
@@ -328,7 +323,7 @@ export default function TransactionDetailsPage() {
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">
                   Tipo de Recurrencia
                 </h3>
-                <p className="text-base">{getRecurrenceLabel()}</p>
+                <p className="text-base">{getRecurrenceLabelText()}</p>
               </div>
 
               {transaction.notes && (

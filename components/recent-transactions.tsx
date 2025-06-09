@@ -1,25 +1,12 @@
 "use client";
 
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  DollarSign,
-  ShoppingBag,
-  Home,
-  CreditCard,
-  Building,
-  Book,
-  Plane,
-  Coffee,
-  Briefcase,
-  Heart,
-  Gift,
-} from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFinance } from "@/context/finance-context";
 import { useMemo } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import { getCategoryIconByName } from "@/lib/category-utils";
 import {
   Table,
   TableHeader,
@@ -30,21 +17,7 @@ import {
 } from "@/components/ui/table";
 import { useRouter } from "next/navigation";
 
-// Mapeo de iconos por categoría
-const CATEGORY_ICONS: Record<string, any> = {
-  Trabajo: Briefcase,
-  Alimentación: ShoppingBag,
-  Vivienda: Home,
-  Servicios: Building,
-  Deudas: CreditCard,
-  Educación: Book,
-  Viajes: Plane,
-  Ocio: Coffee,
-  Salud: Heart,
-  Regalos: Gift,
-  // Icono por defecto
-  default: DollarSign,
-};
+// Usando el sistema unificado de iconos desde category-utils
 
 export function RecentTransactions() {
   const { state } = useFinance();
@@ -61,8 +34,7 @@ export function RecentTransactions() {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 4)
       .map((transaction) => {
-        const icon =
-          CATEGORY_ICONS[transaction.category] || CATEGORY_ICONS.default;
+        // Obtenemos el icono usando el sistema unificado
         const formattedDate = formatDistanceToNow(new Date(transaction.date), {
           addSuffix: true,
           locale: es,
@@ -78,7 +50,6 @@ export function RecentTransactions() {
           date: formattedDate,
           type: transaction.type,
           category: transaction.category,
-          icon,
         };
       });
   }, [state.transactions]);
@@ -125,7 +96,16 @@ export function RecentTransactions() {
                     {transaction.description}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    {transaction.category}
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const IconComponent = getCategoryIconByName(
+                          transaction.category,
+                          state.categories
+                        );
+                        return <IconComponent className="h-3 w-3" />;
+                      })()}
+                      {transaction.category}
+                    </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     {transaction.date}
