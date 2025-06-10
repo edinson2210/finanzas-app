@@ -10,8 +10,10 @@ import {
   Plus,
   Wallet,
   Tags,
+  Calendar,
+  History,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useFinance } from "@/context/finance-context";
@@ -30,12 +32,38 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IncomeExpenseChart } from "@/components/income-expense-chart";
 import { RecentTransactions } from "@/components/recent-transactions";
 import { ExpensesBreakdown } from "@/components/expenses-breakdown";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 export default function Dashboard() {
   const router = useRouter();
   const { status } = useSession();
-  const { state, getTotalBalance, getTotalIncome, getTotalExpenses } =
-    useFinance();
+  const {
+    state,
+    getTotalBalance,
+    getTotalIncome,
+    getTotalExpenses,
+    getCurrentMonthIncome,
+    getCurrentMonthExpenses,
+    getCurrentMonthBalance,
+  } = useFinance();
+
+  // Estado para el toggle entre vista mensual y total
+  const [viewMode, setViewMode] = useState<"month" | "total">("month");
+
+  // Funciones helper para obtener valores según el modo de vista
+  const getDisplayIncome = () => {
+    return viewMode === "month" ? getCurrentMonthIncome() : getTotalIncome();
+  };
+
+  const getDisplayExpenses = () => {
+    return viewMode === "month"
+      ? getCurrentMonthExpenses()
+      : getTotalExpenses();
+  };
+
+  const getDisplayBalance = () => {
+    return viewMode === "month" ? getCurrentMonthBalance() : getTotalBalance();
+  };
 
   // Redirigir si no está autenticado
   useEffect(() => {
@@ -72,52 +100,96 @@ export default function Dashboard() {
     }).format(amount);
   };
 
+  // Obtener el nombre del mes actual para mostrar en la UI
+  const getCurrentMonthName = () => {
+    const now = new Date();
+    return now.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+  };
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight">
-            Panel de Control
-          </h1>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link href="/transactions/new">
-                <Plus className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Nueva Transacción</span>
-                <span className="sm:hidden">Nueva</span>
-              </Link>
-            </Button>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+              Panel de Control
+            </h1>
+            <div className="flex items-center gap-2">
+              <ToggleGroup
+                type="single"
+                value={viewMode}
+                onValueChange={(value) =>
+                  value && setViewMode(value as "month" | "total")
+                }
+                className="border"
+              >
+                <ToggleGroupItem
+                  value="month"
+                  aria-label="Vista mensual"
+                  size="sm"
+                >
+                  <Calendar className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Este mes</span>
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="total"
+                  aria-label="Vista total"
+                  size="sm"
+                >
+                  <History className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Histórico</span>
+                </ToggleGroupItem>
+              </ToggleGroup>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/transactions/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Nueva Transacción</span>
+                  <span className="sm:hidden">Nueva</span>
+                </Link>
+              </Button>
+            </div>
+          </div>
+          <div className="text-sm text-muted-foreground text-right">
+            {viewMode === "month"
+              ? `Viendo datos de: ${getCurrentMonthName()}`
+              : "Viendo datos históricos (todos los registros)"}
           </div>
         </div>
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Balance Total
+                {viewMode === "month" ? "Balance del Mes" : "Balance Total"}
               </CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatAmount(getTotalBalance())}
+                {formatAmount(getDisplayBalance())}
               </div>
               <p className="text-xs text-muted-foreground">
-                Balance actual de tus finanzas
+                {viewMode === "month"
+                  ? "Balance del mes actual"
+                  : "Balance histórico de tus finanzas"}
               </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Ingresos Mensuales
+                {viewMode === "month" ? "Ingresos del Mes" : "Ingresos Totales"}
               </CardTitle>
               <Wallet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatAmount(getTotalIncome())}
+                {formatAmount(getDisplayIncome())}
               </div>
-              <p className="text-xs text-muted-foreground">Total de ingresos</p>
+              <p className="text-xs text-muted-foreground">
+                {viewMode === "month"
+                  ? "Ingresos del mes actual"
+                  : "Total histórico de ingresos"}
+              </p>
             </CardContent>
             <CardFooter>
               <Button asChild variant="outline" className="w-full">
@@ -131,15 +203,19 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Gastos Mensuales
+                {viewMode === "month" ? "Gastos del Mes" : "Gastos Totales"}
               </CardTitle>
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatAmount(getTotalExpenses())}
+                {formatAmount(getDisplayExpenses())}
               </div>
-              <p className="text-xs text-muted-foreground">Total de gastos</p>
+              <p className="text-xs text-muted-foreground">
+                {viewMode === "month"
+                  ? "Gastos del mes actual"
+                  : "Total histórico de gastos"}
+              </p>
             </CardContent>
             <CardFooter>
               <Button asChild variant="outline" className="w-full">

@@ -182,6 +182,9 @@ type FinanceContextType = {
   getTotalBalance: () => number;
   getTotalIncome: () => number;
   getTotalExpenses: () => number;
+  getCurrentMonthIncome: () => number;
+  getCurrentMonthExpenses: () => number;
+  getCurrentMonthBalance: () => number;
   getUpcomingPayments: (days?: number) => Transaction[];
   getTransactionsByCategory: () => Record<string, number>;
   fetchAllData: () => Promise<void>;
@@ -1044,6 +1047,41 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }, 0);
   };
 
+  // Nuevas funciones para obtener datos del mes actual
+  const getCurrentMonthIncome = () => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    return state.transactions
+      .filter(
+        (t) =>
+          t.type === "income" &&
+          new Date(t.date) >= monthStart &&
+          new Date(t.date) <= monthEnd
+      )
+      .reduce((sum, t) => sum + t.amount, 0);
+  };
+
+  const getCurrentMonthExpenses = () => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    return state.transactions
+      .filter(
+        (t) =>
+          t.type === "expense" &&
+          new Date(t.date) >= monthStart &&
+          new Date(t.date) <= monthEnd
+      )
+      .reduce((sum, t) => sum + t.amount, 0);
+  };
+
+  const getCurrentMonthBalance = () => {
+    return getCurrentMonthIncome() - getCurrentMonthExpenses();
+  };
+
   const getUpcomingPayments = (days = 30) => {
     const today = new Date();
     const futureDate = new Date(today);
@@ -1521,6 +1559,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         getTotalBalance,
         getTotalIncome,
         getTotalExpenses,
+        getCurrentMonthIncome,
+        getCurrentMonthExpenses,
+        getCurrentMonthBalance,
         getUpcomingPayments,
         getTransactionsByCategory,
         fetchAllData,
