@@ -199,6 +199,7 @@ type FinanceContextType = {
   ) => Promise<void>;
   checkBudgetNotifications: () => Promise<void>;
   checkDebtNotifications: () => Promise<void>;
+  generateRecurringTransactions: () => Promise<void>;
 };
 
 // Estado inicial para el proveedor
@@ -475,20 +476,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   // Cargar datos cuando el usuario está autenticado
   useEffect(() => {
     if (status === "authenticated" && !dataLoaded) {
-      fetchAllData();
-    }
-  }, [status, dataLoaded]);
-
-  // Cargar datos cuando cambia el estado de la sesión
-  useEffect(() => {
-    if (status === "authenticated") {
       fetchAllData().then(() => {
         // Verificar notificaciones después de cargar todos los datos
         checkBudgetNotifications();
         checkDebtNotifications();
       });
     }
-  }, [status]);
+  }, [status, dataLoaded]);
 
   // Función para cargar todos los datos del usuario
   const fetchAllData = async () => {
@@ -498,6 +492,27 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
       // Cargar transacciones
       await fetchTransactions();
+
+      // Generar transacciones recurrentes pendientes (sin mostrar toast si no se generan)
+      try {
+        const response = await fetch("/api/recurring-transactions", {
+          method: "POST",
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          // Solo recargar transacciones si se generaron nuevas
+          if (result.created > 0) {
+            await fetchTransactions();
+          }
+        }
+      } catch (error) {
+        // Fallar silenciosamente para no interferir con la carga inicial
+        console.warn(
+          "No se pudieron generar transacciones recurrentes:",
+          error
+        );
+      }
 
       // Cargar categorías
       await fetchCategories();
@@ -1447,6 +1462,42 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Función para generar transacciones recurrentes
+  const generateRecurringTransactions = async () => {
+    try {
+      const response = await fetch("/api/recurring-transactions", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(
+          error.message || "Error al generar transacciones recurrentes"
+        );
+      }
+
+      const result = await response.json();
+
+      // Recargar todas las transacciones para incluir las nuevas
+      await fetchTransactions();
+
+      if (result.created > 0) {
+        toast({
+          title: "Transacciones generadas",
+          description: `Se generaron ${result.created} transacciones recurrentes.`,
+        });
+      }
+    } catch (error: any) {
+      console.error("Error al generar transacciones recurrentes:", error);
+      toast({
+        title: "Error",
+        description:
+          error.message || "Error al generar transacciones recurrentes",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <FinanceContext.Provider
       value={{
@@ -1480,6 +1531,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         createNotification,
         checkBudgetNotifications,
         checkDebtNotifications,
+        generateRecurringTransactions,
       }}
     >
       {children}

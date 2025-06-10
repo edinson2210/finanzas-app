@@ -34,13 +34,8 @@ import { ExpensesBreakdown } from "@/components/expenses-breakdown";
 export default function Dashboard() {
   const router = useRouter();
   const { status } = useSession();
-  const {
-    state,
-    getTotalBalance,
-    getTotalIncome,
-    getTotalExpenses,
-    cleanupDuplicateTransactions,
-  } = useFinance();
+  const { state, getTotalBalance, getTotalIncome, getTotalExpenses } =
+    useFinance();
 
   // Redirigir si no está autenticado
   useEffect(() => {
@@ -85,14 +80,6 @@ export default function Dashboard() {
             Panel de Control
           </h1>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={cleanupDuplicateTransactions}
-              className="hidden sm:flex"
-            >
-              Limpiar Duplicados
-            </Button>
             <Button asChild variant="outline" size="sm">
               <Link href="/transactions/new">
                 <Plus className="mr-2 h-4 w-4" />
